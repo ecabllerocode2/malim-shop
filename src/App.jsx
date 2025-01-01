@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { FaSearch, FaWhatsapp } from "react-icons/fa";
 import { db } from "./credenciales";
 import { collection, getDocs } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
 function App() {
   //Estado para manejar que categoria está seleccionada
@@ -10,7 +11,15 @@ function App() {
   //Estado para almacenar las prendas
   const [prendas, setPrendas] = useState([]);
   //Estado para manejar las busquedas
-  const [busqueda, setBusqueda] = useState("")
+  const [busqueda, setBusqueda] = useState("");
+
+  //Creamos navigate para poder navegar a otra ruta
+  const navigate = useNavigate();
+
+  //Creamos la funcion que va anavergar a otra ruta al tocar una prenda
+  const clickPrenda = (id) => {
+    navigate(`/DetallePrenda/${id}`);
+  }
 
   //useEffec para cargar las prendas de la base de datos al estado
   useEffect(() => {
@@ -85,6 +94,19 @@ function App() {
     const handleBusqueda = (e) => {
       setBusqueda(e.target.value);
     }
+
+    //Funcion para pedir informacion por Whatsapp
+    const enviarWhatsapp = (prenda) => {
+      var mensaje;
+      if (!prenda.fotos) {
+        mensaje = `Hola, estoy interesada en este producto:
+        %0A${prenda.prenda}`;
+      } else{
+        mensaje = `Hola, estoy interesada en este producto:
+        %0A${prenda.prenda}%0A${prenda.fotos[0]}`;
+      }
+      window.open(`https://wa.me/5615967613?text=${mensaje}`)
+    }
   
 
 
@@ -117,11 +139,11 @@ function App() {
       </div>
       <div id="contenedor-lista" className="mx-3 grid grid-cols-2 gap-x-10 lg:grid-cols-5">
         {(filtrarPrendas().map((prenda) => (
-          <div id="tarjeta-prenda" className="h-64 lg:h-72 shadow-lg mb-5">
+          <div onClick={()=> clickPrenda(prenda.id)} id="tarjeta-prenda" className="h-64 lg:h-72 shadow-lg mb-5">
             <img src={prenda.fotos[0]} alt={prenda.prenda} className="w-full h-4/5"/>
             <div className="flex flex-row items-center px-1 justify-between h-1/5">
               <p className="w-3/4 font-playfair text-sm text-texto">{prenda.prenda}</p>
-              <FaWhatsapp className="mr-2 text-lg text-texto"/>
+              <FaWhatsapp onClick={() => enviarWhatsapp(prenda)} className="mr-2 text-lg text-texto"/>
             </div>
           </div>
         )))}
