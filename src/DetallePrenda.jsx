@@ -75,11 +75,15 @@ function DetallePrenda() {
 
     const clickPrenda = (id) => {
         navigate(`/DetallePrenda/${id}`);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+
     }
 
     //Funcion para regresar a home
     const home = () => {
-        navigate("/")
+        navigate("/");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+
     }
 
     //UNCION PARA PEDIR INFO POR WHATSAPP
@@ -98,13 +102,13 @@ function DetallePrenda() {
 
 
     return (
-        <div className="h-screen">
+        <div className="lg:flex lg:flex-row">
             <div className="h-5 absolute z-10 mt-1 ml-2" onClick={home}>
-                <IoMdHome className="text-2xl text-titulo shadow-xl"/>
+                <IoMdHome className="text-2xl text-titulo"/>
             </div>
-            <div id="tarjeta" className="w-full h-5/6 pt-0">
+            <div id="tarjeta" className="w-full lg:w-1/2 h-5/6 pt-0">
                 {datos.fotos && datos.fotos.length > 0 ? (
-                    <Swiper className="w-full h-4/5"
+                    <Swiper className="w-full h-auto"
                         spaceBetween={10}
                         slidesPerView={1}
                         pagination={{ clickable: true }}
@@ -148,15 +152,15 @@ function DetallePrenda() {
                     </div>
                 </div>
             </div>
-            <div className="relative bottom-0 h-1/4 mx-3">
-                <p className="text-texto text-sm">Tal vez te interese</p>
-                <div className="overflow-x-auto flex h-full scroll-smooth">
+            <div className="mx-3 lg:h-auto">
+                <p className="text-texto text-sm lg:text-center lg:font-bold lg:text-md">Tal vez te interese</p>
+                <div className="overflow-x-auto flex scroll-smooth lg:grid lg:grid-cols-3 lg:w-full lg:gap-4">
                     {categoriaFilter().map((prenda) => (
-                        <div onClick={() => clickPrenda(prenda.id)} id="tarjeta-prenda" className="h-full
-                         w-24 flex-shrink-0 mr-5">
-                            <img src={prenda.fotos[0]} alt={prenda.prenda} className="h-3/5 w-full" />
-                            <div className="flex flex-row items-center px-1 h-1/5">
-                                <p className="font-montserrat w-full h-full text-xs text-texto">{prenda.prenda}</p>
+                        <div onClick={() => clickPrenda(prenda.id)} id="tarjeta-prenda" className="h-44
+                         w-24 flex-shrink-0 mr-5 lg:w-full lg:h-full">
+                            <img src={prenda.fotos[0]} alt={prenda.prenda} className="h-4/6 w-full" />
+                            <div className="flex flex-row items-center px-1">
+                                <p className="font-montserrat w-full text-xs text-texto">{prenda.prenda}</p>
                             </div>
                         </div>
                     ))}

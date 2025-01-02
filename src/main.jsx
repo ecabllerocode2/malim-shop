@@ -5,6 +5,9 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import App from './App.jsx'
 import DetallePrenda from './DetallePrenda.jsx'
 
+
+
+
 createRoot(document.getElementById('root')).render(
 
   <StrictMode>

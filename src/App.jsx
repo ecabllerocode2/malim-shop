@@ -1,76 +1,79 @@
 import logo from "./logo.png";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { FaSearch, FaWhatsapp } from "react-icons/fa";
-import { db } from "./credenciales";
+import { db, messaging } from "./credenciales";
 import { collection, getDocs } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { generateToken } from "./credenciales";
+import { onMessage } from "firebase/messaging";
 
 function App() {
-
-  //Todo lo necesario para que aparezca la opcion de instalar pwa
-  useEffect(() => {
-    let deferredPrompt;
-
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-
-      // Muestra el botón o indicador para instalar
-      const installButton = document.getElementById('installButton');
-      if (installButton) {
-        installButton.style.display = 'block';
-        installButton.addEventListener('click', async () => {
-          deferredPrompt.prompt();
-          const { outcome } = await deferredPrompt.userChoice;
-          if (outcome === 'accepted') {
-            console.log('App instalada');
-          } else {
-            console.log('Instalación cancelada');
-          }
-          deferredPrompt = null;
-        });
-      }
-    });
-  }, []);
-
-  //Estado para manejar que categoria está seleccionada
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstallButton, setShowInstallButton] = useState(false);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("Todo");
-  //Estado para almacenar las prendas
   const [prendas, setPrendas] = useState([]);
-  //Estado para manejar las busquedas
   const [busqueda, setBusqueda] = useState("");
-
-  //Creamos navigate para poder navegar a otra ruta
   const navigate = useNavigate();
 
-  //Creamos la funcion que va anavergar a otra ruta al tocar una prenda
   const clickPrenda = (id) => {
     navigate(`/DetallePrenda/${id}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
-
-  //useEffec para cargar las prendas de la base de datos al estado
   useEffect(() => {
     const obtenerPrendas = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "disponible"));
-        const arrayPrendas = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        arrayPrendas.sort((a, b) => {
-          const fechaA = new Date(a.fecha || "1970-01-01").getTime();
-          const fechaB = new Date(b.fecha || "1970-01-01").getTime();
-          return fechaB - fechaA;
-        });
+        const arrayPrendas = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        arrayPrendas.sort((a, b) => new Date(b.fecha || "1970-01-01").getTime() - new Date(a.fecha || "1970-01-01").getTime());
         setPrendas(arrayPrendas);
       } catch (error) {
-        alert("Error al cargr las prendas");
+        toast.error("Error al cargar las prendas: " + error.message);
       }
-    }
+    };
     obtenerPrendas();
   }, [categoriaSeleccionada]);
 
-  //Effect para filtrar por categoria
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallButton(true);
+    };
+
+    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    return () => window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      try {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === "accepted") {
+          toast.success("App instalada");
+          setShowInstallButton(false);
+
+          
+        } else {
+          toast.info("Instalación cancelada");
+        }
+        setDeferredPrompt(null);
+      } catch (error) {
+        toast.error("Error en la instalación: " + error.message);
+      }
+    }
+  };
+
+  //UseEffect para generar token
+  useEffect(() => {
+    generateToken();
+    onMessage(messaging, (payload) => {
+      console.log(payload);
+    })
+  }, [])
+
   const filtrarPrendas = () => {
     let filtroCatgoria;
     if (categoriaSeleccionada === "Todo") {
@@ -108,21 +111,18 @@ function App() {
 
     return filtroCatgoria.filter((prenda) =>
       prenda.prenda.toLowerCase().includes(busqueda.toLowerCase())
-    )
+    );
   };
 
-  //Funcion que cambia de categoria y lleva el scroll hacia arriba
   const handleCategoria = (catgoria) => {
     setCategoriaSeleccionada(catgoria);
-    window.scrollTo({ top: 0, behavior: "smooth" })
-  }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
-  //Funcion para manejar el input de busqueda
   const handleBusqueda = (e) => {
     setBusqueda(e.target.value);
-  }
+  };
 
-  //Funcion para pedir informacion por Whatsapp
   const enviarWhatsapp = (prenda) => {
     var mensaje;
     if (!prenda.fotos) {
@@ -132,19 +132,27 @@ function App() {
       mensaje = `Hola, estoy interesada en este producto:
         %0A${prenda.prenda}%0A${prenda.fotos[0]}`;
     }
-    window.open(`https://wa.me/5615967613?text=${mensaje}`)
-  }
+    window.open(`https://wa.me/5615967613?text=${mensaje}`);
+  };
 
 
 
   return (
     <div className='bg-gris h-screen w-full'>
-      <div id="installButton" style={{ display: 'none' }} className="mt-20 z-20 flex w-full justify-center h-20">
-        <button className="w-1/4 bg-biege border-titulo border-2 rounded-xl
-        text-texto font-bold font-montserrat">
-          Instalar
-        </button>
-      </div>
+      {/* Botón de instalación */}
+      {showInstallButton && ( 
+        <div className="mt-20 z-20 flex w-full justify-center h-20">
+          <button
+            id="installButton"
+            onClick={handleInstallClick}
+            className="w-1/4 bg-biege border-titulo border-2 rounded-xl
+              text-texto font-bold font-montserrat"
+          >
+            Instalar
+          </button>
+        </div>
+      )}
+      <ToastContainer />
       <div id="header" className="-mt-2 fixed top-0 left-0 flex flex-col z-10 w-full justify-center bg-biege">
         <div className="flex justify-center">
           <img className="h-16 w-16" src={logo} alt="logo malim" />
@@ -170,6 +178,7 @@ function App() {
         <input type="text" onChange={handleBusqueda} value={busqueda} placeholder="Buscar" className="bg-gris border-2 rounded-xl border-biege
         placeholder-biege text-sm h-7 pl-7 z-0 focus:outline-none text-texto font-montserrat"/>
       </div>
+      <ToastContainer />
       <div id="contenedor-lista" className="mx-3 grid grid-cols-2 gap-x-10 lg:grid-cols-5">
         {(filtrarPrendas().map((prenda) => (
           <div onClick={() => clickPrenda(prenda.id)} id="tarjeta-prenda" className="h-64 lg:h-72 shadow-lg mb-5">
