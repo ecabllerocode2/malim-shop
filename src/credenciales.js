@@ -1,6 +1,6 @@
 // credenciales.js
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, collection, addDoc, query, where, getDocs, Timestamp } from "firebase/firestore";
 import { getMessaging, getToken } from "firebase/messaging";
 
 // Configuración de Firebase
@@ -34,5 +34,20 @@ export const generateToken = async () => {
       vapidKey: "BPM6VClBoZtrYgw2TlJ4o4CPgWOLCbpE9lYdHbV-8RX_x6MaYFUEWG0EjBf7iDEVTMaaObPfU5MB87SPrC2u4rg"
     });
     console.log(token);
+    if (token) {
+      const tokensRef = collection(db, "tokens");
+      const q = query(tokensRef, where("token", "==", token));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        await addDoc(tokensRef, {
+          token,
+          timestamp: Timestamp.now()
+        });
+        console.log("Token guardado");
+      } else{
+        console.log("El token ya existe en la base de datos");
+      }
+    }
   }
 };
