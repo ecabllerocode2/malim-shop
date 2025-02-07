@@ -130,13 +130,14 @@ function DetallePrenda() {
                         <img src={logo} alt="" className="text-center h-20 w-20" />
                     </div>
                 )}
-                <div className="m-3">
+                <div className="mx-3">
                     <div className="flex flex-row font-montserrat justify-between">
                         <div>
                             <p className="text-titulo font-bold">{datos.prenda}</p>
                             <p className="text-sm font-montserrat text-texto">{datos.detalles}</p>
                         </div>
                         <div className="text-texto text-sm mr-5 text-center">
+                        <p className="text-titulo font-bold text-lg">${datos.precio}</p>
                             {datos.talla ? (
                                 datos.talla.map((talla) => (
                                     <p>{talla}</p>
@@ -147,8 +148,8 @@ function DetallePrenda() {
                     <div className="flex justify-center">
                         <button
                             onClick={enviarWhatsapp}
-                            className="font-bold text-xs bg-titulo
-                    text-white px-4 py-2 rounded-xl">Pedir información</button>
+                            className="font-bold text-md bg-titulo
+                    text-white px-4 py-2 rounded-xl">Comprar</button>
                     </div>
                 </div>
             </div>
