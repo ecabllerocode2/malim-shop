@@ -7,11 +7,11 @@ export default {
   theme: {
     extend: {
       colors: {
-        "gris":"#d9d9d9",
-        "biege":"#d9ab91",
-        "texto":"#593528",
-        "titulo":"#8c2e26",
-        "cobre":"#a66953",
+        "gris":"#f5ebdd",
+        "biege":"#d88c6d",
+        "texto":"#3c3c3c",
+        "titulo":"#d88c6d",
+        "cobre":"#f6d28c",
       },
       fontFamily: {
         playfair: ["Playfair Display", "serif"],
