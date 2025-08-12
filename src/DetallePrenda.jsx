@@ -47,14 +47,15 @@ function DetallePrenda() {
     };
 
     const enviarWhatsapp = () => {
-        const baseUrl = window.location.origin;
-        const productoUrl = `${baseUrl}/detallePrenda/${id}`;
+  const baseUrl = window.location.origin;
+  const productoUrl = `${baseUrl}/detallePrenda/${id}`;
 
-        const mensaje = `Hola, estoy interesada en este producto:%0A${datos.prenda}%0A${productoUrl}`;
+  // Mensaje con saltos de línea (usa \n y luego encodeURIComponent)
+  const mensaje = `Hola, estoy interesada en este producto:\n${datos.prenda}\n\n${productoUrl}`;
 
-        window.open(`https://wa.me/5615967613?text=${encodeURIComponent(mensaje)}`);
-    };
-
+  // encodeURIComponent se encarga de codificar saltos de línea, espacios, etc.
+  window.open(`https://wa.me/5615967613?text=${encodeURIComponent(mensaje)}`);
+};
     const home = () => {
         navigate("/");
         window.scrollTo({ top: 0, behavior: "smooth" });
