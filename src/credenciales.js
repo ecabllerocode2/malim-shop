@@ -1,7 +1,8 @@
 // credenciales.js
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, query, where, getDocs, Timestamp } from "firebase/firestore";
+import { getFirestore, collection, addDoc, query, where, Timestamp, getDocs } from "firebase/firestore";
 import { getMessaging, getToken } from "firebase/messaging";
+import { getAnalytics } from "firebase/analytics";
 
 // Configuración de Firebase
 const firebaseConfig = {
@@ -14,18 +15,21 @@ const firebaseConfig = {
   measurementId: "G-9DD5YEX28R"
 };
 
-
 // Inicializa Firebase
 const app = initializeApp(firebaseConfig);
 
-// Inicializa Firestore
+// Firestore
 const db = getFirestore(app);
 
-// Inicializa Firebase Messaging
+// Messaging
 const messaging = getMessaging(app);
 
-// Exporta las instancias para usarlas en otros archivos
-export { db, messaging };
+// Analytics (solo si window existe)
+const analytics = typeof window !== "undefined" ? getAnalytics(app) : null;
+
+// Exporta instancias
+export { db, messaging, analytics };
+
 export const generateToken = async () => {
   const permission = await Notification.requestPermission();
   console.log(permission);
@@ -45,7 +49,7 @@ export const generateToken = async () => {
           timestamp: Timestamp.now()
         });
         console.log("Token guardado");
-      } else{
+      } else {
         console.log("El token ya existe en la base de datos");
       }
     }

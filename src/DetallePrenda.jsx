@@ -8,6 +8,7 @@ import { IoMdHome } from "react-icons/io";
 import logo from "./logo.png";
 import { useProducts } from "./contexts/ProductsContext";
 import { FaWhatsapp } from "react-icons/fa";
+import { trackViewItem, trackWhatsappClick } from "./analytics";
 
 function DetallePrenda() {
   const navigate = useNavigate();
@@ -15,7 +16,6 @@ function DetallePrenda() {
   const location = useLocation();
   const { getProductById, fetchProductById, products } = useProducts();
 
-  // Leer parámetro foto de la URL (índice de imagen)
   const queryParams = new URLSearchParams(location.search);
   const fotoInicial = parseInt(queryParams.get("foto")) || 0;
 
@@ -26,49 +26,54 @@ function DetallePrenda() {
   useEffect(() => {
     let mounted = true;
     const local = getProductById(id);
-    if (local) {
-      setDatos(local);
-      if (local.fotos && local.fotos.length > 0) {
-        // Ajustar fotoInicial para que no se salga de rango
-        const inicial = fotoInicial < local.fotos.length ? fotoInicial : 0;
-        setFotoActual(local.fotos[inicial]);
+    const setProductData = (p) => {
+      setDatos(p);
+      if (p.fotos && p.fotos.length > 0) {
+        const inicial = fotoInicial < p.fotos.length ? fotoInicial : 0;
+        setFotoActual(p.fotos[inicial]);
         setFotoActualIndex(inicial);
       }
+    };
+
+    if (local) {
+      setProductData(local);
     } else {
-      fetchProductById(id)
-        .then((p) => {
-          if (!mounted) return;
-          setDatos(p);
-          if (p.fotos && p.fotos.length > 0) {
-            const inicial = fotoInicial < p.fotos.length ? fotoInicial : 0;
-            setFotoActual(p.fotos[inicial]);
-            setFotoActualIndex(inicial);
-          }
-        })
-        .catch(() => {
-          if (!mounted) return;
-          alert("Error al cargar el producto");
-        });
+      fetchProductById(id).then((p) => mounted && setProductData(p));
     }
+
     return () => {
       mounted = false;
     };
   }, [id, getProductById, fetchProductById, fotoInicial]);
 
+  useEffect(() => {
+    if (datos?.id) {
+      trackViewItem({
+        id: datos.id,
+        nombre: datos.prenda,
+        categoria: datos.categoria,
+        precio: datos.precio
+      });
+    }
+  }, [datos]);
+
   const categoriaFilter = () => {
     if (!datos.categoria) return [];
-    return (products || []).filter(
-      (p) => p.categoria === datos.categoria && p.id !== id
-    );
+    return (products || []).filter((p) => p.categoria === datos.categoria && p.id !== id);
   };
 
   const enviarWhatsapp = () => {
     const baseUrl = window.location.origin;
     const productoUrl = `${baseUrl}/detallePrenda/${id}?foto=${fotoActualIndex}`;
-
     const mensaje = `Hola, estoy interesada en este producto:\n${datos.prenda}\n\n${productoUrl}`;
+    const waUrl = `https://wa.me/5615967613?text=${encodeURIComponent(mensaje)}`;
 
-    window.open(`https://wa.me/5615967613?text=${encodeURIComponent(mensaje)}`);
+    trackWhatsappClick({
+      id: datos.id,
+      nombre: datos.prenda,
+      categoria: datos.categoria,
+      precio: datos.precio
+    }, "5615967613", waUrl);
   };
 
   const home = () => {
@@ -94,8 +99,7 @@ function DetallePrenda() {
             initialSlide={fotoActualIndex}
             onSlideChange={(swiper) => {
               setFotoActualIndex(swiper.activeIndex);
-              const fotoActiva = datos.fotos[swiper.activeIndex];
-              setFotoActual(fotoActiva);
+              setFotoActual(datos.fotos[swiper.activeIndex]);
             }}
           >
             {datos.fotos.map((foto, i) => (
@@ -105,7 +109,6 @@ function DetallePrenda() {
                   src={foto}
                   alt={`${datos.prenda} - imagen ${i + 1}`}
                   className="w-full max-h-[70vh] object-contain"
-                  style={{ margin: "0 auto" }}
                 />
               </SwiperSlide>
             ))}
@@ -133,7 +136,7 @@ function DetallePrenda() {
           <div className="flex justify-center">
             <button
               onClick={enviarWhatsapp}
-              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#25D366] text-white font-bold text-md hover:bg-[#1ebe57] transition-colors duration-200"
+              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#25D366] text-white font-bold text-md hover:bg-[#1ebe57]"
             >
               <FaWhatsapp className="text-lg" />
               Consulta por WhatsApp
@@ -158,8 +161,8 @@ function DetallePrenda() {
                 className="h-4/6 w-full object-cover"
               />
               <div className="flex flex-row items-center px-1 w-full">
-                <p className="font-montserrat w-full text-xs text-texto w-1/2">{prenda.prenda}</p>
-                <p className="font-montserrat w-full text-end text-sm w-1/2 text-biege font-bold">${prenda.precio}</p>
+                <p className="font-montserrat w-full text-xs text-texto">{prenda.prenda}</p>
+                <p className="font-montserrat w-full text-end text-sm text-biege font-bold">${prenda.precio}</p>
               </div>
             </div>
           ))}

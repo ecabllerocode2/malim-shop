@@ -6,6 +6,10 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import App from "./App.jsx";
 import DetallePrenda from "./DetallePrenda.jsx";
 import { ProductsProvider } from "./contexts/ProductsContext";
+import { initGA } from './analytics'
+
+initGA(import.meta.env.VITE_GA_ID)
+
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
