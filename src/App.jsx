@@ -166,7 +166,7 @@ function App() {
           <img className="h-16 w-16" src={logo} alt="logo Malim" />
         </div>
         {categoriaSeleccionada === "Patria" && (
-          <div className="w-full py-4 text-center font-bold text-lg font-playfair bg-biege text-white shadow-md">
+          <div className="w-full py-4 text-center font-bold text-xs lg:text-lg font-playfair bg-biege text-white shadow-md">
             🇲🇽 Celebrar a México es celebrar la belleza de sus mujeres 🇲🇽
           </div>
         )}
@@ -177,7 +177,7 @@ function App() {
           id="categorias"
           className="bg-biege h-6 px-2 flex flex-row text-texto justify-between items-center"
         >
-          {["Patria", "Todo", "Invierno", "Casual", "Deporte", "Infantil", "Pantalones"].map(
+          {["Patria", "Todo", "Invierno", "Casual", "Deporte", "Pantalones"].map(
             (cat) => (
               <p
                 key={cat}
