@@ -13,7 +13,7 @@ import { initGA, pageView, trackSelectItem, trackWhatsappClick, trackSearch } fr
 function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("Todo");
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("Patria");
   const [busqueda, setBusqueda] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
@@ -74,6 +74,7 @@ function App() {
 
   const categoriasConfig = {
     Todo: () => true,
+    Patria: (c) => c === "Patria",  // 👈 nueva categoría
     Invierno: (c) =>
       ["Ensambles", "Abrigos", "Chamarras", "Mallones", "Sudaderas", "Capas", "Maxi sudaderas", "Gorros", "Maxi cobijas", "Chalecos", "Suéteres"].includes(c),
     Casual: (c) =>
@@ -135,7 +136,17 @@ function App() {
   };
 
   return (
-    <div className="bg-gris min-h-screen w-full">
+    <div className={`min-h-screen w-full ${categoriaSeleccionada === "Patria"
+        ? ""
+        : "bg-gris"
+      }`}
+      style={
+        categoriaSeleccionada === "Patria"
+          ? {
+            background: "linear-gradient(90deg, rgba(0,128,0,0.8) 0%, rgba(255,255,255,0.9) 50%, rgba(255,0,0,0.8) 100%)",
+          }
+          : {}
+      }>
       {showInstallButton && (
         <div className="mt-20 z-20 flex w-full justify-center h-20">
           <button
@@ -154,21 +165,45 @@ function App() {
         <div className="flex justify-center py-2">
           <img className="h-16 w-16" src={logo} alt="logo Malim" />
         </div>
+        {categoriaSeleccionada === "Patria" && (
+          <div className="w-full py-4 text-center font-bold text-lg font-playfair bg-biege text-white shadow-md">
+            🇲🇽 Celebrar a México es celebrar la belleza de sus mujeres 🇲🇽
+          </div>
+        )}
 
-        <nav id="categorias" className="bg-biege h-6 -mt-4 px-2 flex flex-row text-texto justify-between mb-1 items-center">
-          {["Todo", "Invierno", "Casual", "Deporte", "Infantil", "Pantalones"].map((cat) => (
-            <p
-              key={cat}
-              onClick={() => handleCategoria(cat)}
-              className={`${categoriaSeleccionada === cat ? "border-b-2 border-cobre" : ""} font-playfair text-sm cursor-pointer select-none`}
-            >
-              {cat}
-            </p>
-          ))}
+
+
+        <nav
+          id="categorias"
+          className="bg-biege h-6 px-2 flex flex-row text-texto justify-between items-center"
+        >
+          {["Patria", "Todo", "Invierno", "Casual", "Deporte", "Infantil", "Pantalones"].map(
+            (cat) => (
+              <p
+                key={cat}
+                onClick={() => handleCategoria(cat)}
+                className={`font-playfair text-sm cursor-pointer select-none 
+          ${categoriaSeleccionada === cat
+                    ? cat === "Patria"
+                      ? "bg-gradient-to-r from-green-600 via-white to-red-600 text-black px-2 rounded-md"
+                      : "border-b-2 border-cobre"
+                    : ""
+                  }`}
+              >
+                {cat}
+              </p>
+            )
+          )}
         </nav>
+
+
       </div>
 
-      <div id="barra-busqueda" className="my-2 mt-24 pt-2 mx-5 flex items-center gap-2">
+      <div
+        id="barra-busqueda"
+        className="my-2 pt-2 mx-5 flex items-center gap-2"
+        style={{ marginTop: categoriaSeleccionada === "Patria" ? "11rem" : "8rem" }}
+      >
         <div className="relative flex-1">
           <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-biege" />
           <input
@@ -188,6 +223,7 @@ function App() {
           )}
         </div>
       </div>
+
 
       <main id="contenedor-lista" className="mx-3 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3 lg:grid-cols-5 px-2 pb-20">
         {loading ? (
