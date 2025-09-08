@@ -22,6 +22,7 @@ function DetallePrenda() {
   const [datos, setDatos] = useState({});
   const [fotoActualIndex, setFotoActualIndex] = useState(fotoInicial);
   const [fotoActual, setFotoActual] = useState("");
+  const [nudge, setNudge] = useState(true);
 
   useEffect(() => {
     let mounted = true;
@@ -56,6 +57,11 @@ function DetallePrenda() {
       });
     }
   }, [datos]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setNudge(false), 3000); // anima solo 3 segundos
+    return () => clearTimeout(timer);
+  }, []);
 
   const categoriaFilter = () => {
     if (!datos.categoria) return [];
@@ -133,14 +139,32 @@ function DetallePrenda() {
             </div>
           </div>
 
-          <div className="flex justify-center">
+          {/* Microcopy + Botón + Badge */}
+          <div className="flex flex-col items-center mt-6">
+            {/* Microcopy opcional (si quieres reforzar) */}
+            <p className="text-xs text-center text-gris-600 mb-3 px-4">
+              📱 Envía esta prenda directo a WhatsApp con un click.
+            </p>
+
+            {/* Botón con nudge */}
             <button
               onClick={enviarWhatsapp}
-              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-[#25D366] text-white font-bold text-md hover:bg-[#1ebe57]"
+              className={`flex flex-col items-center justify-center gap-1 px-6 py-4 rounded-2xl bg-gradient-to-r from-[#25D366] to-[#128C7E] text-white font-bold hover:scale-105 active:scale-95 transform transition-all duration-200 shadow-xl hover:shadow-2xl ${nudge ? "animate-pulse" : ""
+                }`}
             >
-              <FaWhatsapp className="text-lg" />
-              Consulta por WhatsApp
+              <p className="text-xs font-medium">Click aquí para recibir info</p>
+              <div className="flex flex-row items-center gap-2">
+                <FaWhatsapp className="text-2xl" />
+                <span className="text-lg">¡Escríbenos por WhatsApp!</span>
+              </div>
             </button>
+
+            {/* Badge de confianza */}
+            <div className="mt-3 flex items-center justify-center">
+              <span className="text-xs bg-white text-[#25D366] px-3 py-1 rounded-full font-bold shadow-sm">
+                ✅ Respondemos en menos de 1 minuto
+              </span>
+            </div>
           </div>
         </div>
       </div>

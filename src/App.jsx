@@ -13,7 +13,7 @@ import { initGA, pageView, trackSelectItem, trackWhatsappClick, trackSearch } fr
 function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
-  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("Patria");
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("Todo");
   const [busqueda, setBusqueda] = useState("");
 
   // altura real del header para evitar huecos
@@ -83,19 +83,19 @@ function App() {
   // Config categorías
   const categoriasConfig = {
     Todo: () => true,
-    Patria: (c) => c === "Patria",
-    Invierno: (c) =>
-      ["Ensambles", "Abrigos", "Chamarras", "Mallones", "Sudaderas", "Capas", "Maxi sudaderas", "Gorros", "Maxi cobijas", "Chalecos", "Suéteres"].includes(c),
-    Casual: (c) =>
-      ["Blusones", "Pijamas", "Blazers", "Faldas", "Palazzos", "Blusas", "Gabardinas", "Playeras", "Sacos", "Chalecos", "Conjuntos", "Maxi vestidos", "Camisas", "Medias"].includes(c),
-    Deporte: (c) => ["Playeras deportivas", "Leggins", "Conjuntos deportivos", "Pants", "Shorts"].includes(c),
-    Infantil: (c) => ["Infantil niño", "Infantil niña", "Niños unisex", "Niños uisex"].includes(c),
-    Pantalones: (c) => ["Pantalones", "Leggins", "Overoles"].includes(c),
+    Premium: (prenda) => prenda.proveedor === "Aspik", // <-- ¡Filtramos por proveedor!
+    Invierno: (prenda) =>
+      ["Ensambles", "Abrigos", "Chamarras", "Mallones", "Sudaderas", "Capas", "Maxi sudaderas", "Gorros", "Maxi cobijas", "Chalecos", "Suéteres"].includes(prenda.categoria),
+    Casual: (prenda) =>
+      ["Blusones", "Pijamas", "Blazers", "Faldas", "Palazzos", "Blusas", "Gabardinas", "Playeras", "Sacos", "Chalecos", "Conjuntos", "Maxi vestidos", "Camisas", "Medias"].includes(prenda.categoria),
+    Deporte: (prenda) => ["Playeras deportivas", "Leggins", "Conjuntos deportivos", "Pants", "Shorts"].includes(prenda.categoria),
+    Infantil: (prenda) => ["Infantil niño", "Infantil niña", "Niños unisex", "Niños uisex"].includes(prenda.categoria),
+    Pantalones: (prenda) => ["Pantalones", "Leggins", "Overoles"].includes(prenda.categoria),
   };
 
   const filteredPrendas = useMemo(() => {
     const filterFn = categoriasConfig[categoriaSeleccionada] ?? categoriasConfig.Todo;
-    const listado = (products || []).filter((p) => filterFn(p.categoria));
+    const listado = (products || []).filter((p) => filterFn(p)); // <-- ¡Pasamos el objeto completo!
     if (!busqueda) return listado;
     const term = busqueda.toLowerCase();
     return listado.filter((prenda) => (prenda.prenda || "").toLowerCase().includes(term));
@@ -205,27 +205,22 @@ function App() {
           <img className="h-16 w-16" src={logo} alt="logo Malim" />
         </div>
 
-        {categoriaSeleccionada === "Patria" && (
-          <div className="w-full py-3 text-center font-bold text-xs lg:text-lg font-playfair text-gris shadow-md">
-            🇲🇽 Celebrar a México es celebrar la belleza de sus mujeres 🇲🇽
-          </div>
-        )}
+       
 
         <nav
           id="categorias"
           className="bg-biege h-6 px-2 flex flex-row text-texto justify-between items-center"
         >
-          {["Patria", "Todo", "Invierno", "Casual", "Deporte", "Pantalones"].map((cat) => (
+          {["Todo", "Premium", "Invierno", "Casual", "Deporte", "Pantalones"].map((cat) => (
             <p
               key={cat}
               onClick={() => handleCategoria(cat)}
-              className={`font-playfair text-sm cursor-pointer select-none ${
-                categoriaSeleccionada === cat
+              className={`font-playfair text-sm cursor-pointer select-none ${categoriaSeleccionada === cat
                   ? cat === "Patria"
                     ? "bg-gradient-to-r from-green-600 via-white to-red-600 text-black px-2 rounded-md"
                     : "border-b-2 border-cobre"
                   : ""
-              }`}
+                }`}
             >
               {cat}
             </p>
@@ -310,9 +305,8 @@ function App() {
             "https://wa.me/5615967613?text=Hola,%20necesito%20ayuda%20con%20el%20cat%C3%A1logo"
           )
         }
-        className={`fixed bottom-5 right-5 z-40 flex items-center gap-2 bg-[#25D366] text-white font-bold px-4 py-3 rounded-full shadow-lg hover:scale-105 transition-transform ${
-          nudge ? "animate-bounce" : ""
-        }`}
+        className={`fixed bottom-5 right-5 z-40 flex items-center gap-2 bg-[#25D366] text-white font-bold px-4 py-3 rounded-full shadow-lg hover:scale-105 transition-transform ${nudge ? "animate-bounce" : ""
+          }`}
         aria-label="Contactar por WhatsApp"
       >
         <FaWhatsapp className="text-2xl" />
