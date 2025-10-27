@@ -77,6 +77,7 @@ function App() {
     Deporte: (p) => ["Playeras deportivas", "Leggins", "Conjuntos deportivos", "Pants", "Shorts"].includes(p.categoria),
     Infantil: (p) => ["Infantil niño", "Infantil niña", "Niños unisex", "Niños uisex"].includes(p.categoria),
     Pantalones: (p) => ["Pantalones", "Leggins", "Overoles"].includes(p.categoria),
+    // Aseguramos que la oferta sea > 0
     Ofertas: (prenda) => prenda.oferta && prenda.oferta > 0,
   };
 
@@ -231,6 +232,7 @@ function App() {
                         alt={prenda.prenda}
                         className="w-full h-40 object-cover"
                       />
+                      {/* Aquí prenda.oferta > 0 ya está implícito en prendasEnOferta */}
                       <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
                         -{prenda.oferta}%
                       </div>
@@ -303,7 +305,8 @@ function App() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-5">
               {filteredPrendas.map((prenda) => {
-                const tieneOferta = prenda.oferta && prenda.oferta > 0;
+                // ⭐ CORRECCIÓN CLAVE: Esto asegura que 'tieneOferta' es un booleano, no 0.
+                const tieneOferta = !!(prenda.oferta && prenda.oferta > 0); 
                 const precioFinal = tieneOferta ? Math.round(prenda.precio * (1 - prenda.oferta / 100)) : prenda.precio;
 
                 return (
@@ -319,6 +322,7 @@ function App() {
                         alt={prenda.prenda}
                         className="w-full h-48 object-cover"
                       />
+                      {/* ⭐ CORRECCIÓN DE RENDERIZADO: Utilizamos el booleano 'tieneOferta' */}
                       {tieneOferta && (
                         <div className="absolute top-2 left-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded">
                           -{prenda.oferta}%
@@ -337,6 +341,7 @@ function App() {
                               <span className="text-gray-500 line-through text-xs">${prenda.precio}</span>
                             </>
                           ) : (
+                            // Si no hay oferta, solo se imprime el precio (que nunca es 0)
                             <span className="text-biege font-bold text-md">${prenda.precio}</span>
                           )}
                         </div>

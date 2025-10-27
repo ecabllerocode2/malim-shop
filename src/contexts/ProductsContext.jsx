@@ -70,7 +70,7 @@ export const ProductsProvider = ({ children }) => {
       return false;
     };
 
-    const cached = tryLoadCache();
+    tryLoadCache();
 
     const fetchProducts = async () => {
       dispatch({ type: "FETCH_START" });

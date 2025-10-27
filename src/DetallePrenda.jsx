@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FaWhatsapp, FaArrowLeft } from "react-icons/fa";
 import logo from "./logo.png";
-import { useProducts } from "./contexts/ProductsContext";
+import { useProducts } from "./contexts/ProductsContext"; 
 import { trackViewItem, trackWhatsappClick } from "./analytics";
 
 // Utilidad para capitalizar correctamente
@@ -29,36 +29,86 @@ const extractColores = (detalles = "") => {
 function DetallePrenda() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { products = [] } = useProducts();
+  // Desestructuramos el estado de carga global y la función de carga individual
+  const { products = [], loading: isContextLoading, fetchProductById } = useProducts(); 
   const [prenda, setPrenda] = useState(null);
+  const [isProductLoading, setIsProductLoading] = useState(true); // Estado de carga local
   const [imagenPrincipal, setImagenPrincipal] = useState(0);
 
   useEffect(() => {
-    const found = products.find((p) => p.id === id);
-    if (found) {
-      setPrenda(found);
-      setImagenPrincipal(0);
-      trackViewItem({
-        id: found.id,
-        nombre: found.prenda,
-        categoria: found.categoria,
-        precio: found.precio,
-      });
-    } else {
-      navigate("/");
-    }
-  }, [id, products, navigate]);
+    let isMounted = true; 
 
-  if (!prenda) {
+    if (!id) {
+        navigate("/", { replace: true });
+        return;
+    }
+
+    const loadProduct = async () => {
+        setIsProductLoading(true);
+
+        // 1. Intentar obtener del Context/Cache (rápido)
+        let found = products.find((p) => p.id === id);
+
+        // 2. Si no se encontró, forzamos una lectura individual a Firestore
+        if (!found) {
+            try {
+                // Intentar cargar la prenda con una lectura individual de Firestore
+                found = await fetchProductById(id);
+            } catch (error) {
+                // Si falla (producto no existe), navegamos a la raíz y reemplazamos el historial
+                if (isMounted) {
+                    console.warn(`Producto ${id} no encontrado.`);
+                    navigate("/", { replace: true });
+                    setIsProductLoading(false);
+                }
+                return;
+            }
+        }
+
+        // 3. Establecer el producto si se encontró
+        if (found && isMounted) {
+            setPrenda(found);
+            setImagenPrincipal(0);
+            trackViewItem({
+                id: found.id,
+                nombre: found.prenda,
+                categoria: found.categoria,
+                precio: found.precio,
+            });
+        }
+        
+        if (isMounted) setIsProductLoading(false);
+    };
+
+    loadProduct();
+
+    return () => {
+        isMounted = false;
+    };
+    
+  }, [id, products, navigate, fetchProductById]); 
+
+  // Muestra el spinner de carga si el producto aún no se ha resuelto
+  if (isProductLoading) {
     return (
       <div className="min-h-screen bg-gris flex items-center justify-center">
-        <div className="text-texto">Cargando...</div>
+        <div className="text-texto">Cargando detalles del artículo...</div>
       </div>
     );
   }
 
+  // Si terminamos de cargar (isProductLoading=false) y prenda es null, la redirección ya ocurrió.
+  if (!prenda) {
+    return (
+      <div className="min-h-screen bg-gris flex items-center justify-center">
+          <div className="text-texto">Artículo no encontrado. Redirigiendo...</div>
+      </div>
+    );
+  }
+  
   const fotos = prenda.fotos && prenda.fotos.length > 0 ? prenda.fotos : [logo];
-  const tieneOferta = prenda.oferta && prenda.oferta > 0;
+  // ⭐ CORRECCIÓN CLAVE: Usamos !! para forzar que sea un booleano, NO el valor 0.
+  const tieneOferta = !!(prenda.oferta && prenda.oferta > 0);
   const precioFinal = tieneOferta ? Math.round(prenda.precio * (1 - prenda.oferta / 100)) : prenda.precio;
   const colores = extractColores(prenda.detalles);
   const descripcionLimpia = prenda.detalles
@@ -102,8 +152,9 @@ function DetallePrenda() {
             className="max-h-full max-w-full object-contain"
           />
         </div>
-
+        
         {/* Badge de oferta (ahora en esquina superior derecha) */}
+        {/* Al usar 'tieneOferta' (que ahora es true/false), garantizamos que el 0 nunca se renderiza aquí */}
         {tieneOferta && (
           <div className="absolute top-4 right-4 bg-red-500 text-white text-sm font-bold px-3 py-1.5 rounded-full shadow z-10">
             -{prenda.oferta}%
@@ -155,10 +206,11 @@ function DetallePrenda() {
         </div>
 
         {/* Talla */}
+        {/* Aquí la talla se renderiza directamente, lo cual está bien si no puede ser 0 */}
         {prenda.talla && (
           <div className="mb-4">
             <p className="text-sm text-gray-700">
-              <span className="font-medium">Talla:</span> {prenda.talla}
+              <span className="font-medium">Talla:</span> {Array.isArray(prenda.talla) ? prenda.talla.join(', ') : prenda.talla}
             </p>
           </div>
         )}
