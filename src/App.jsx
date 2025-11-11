@@ -193,13 +193,13 @@ function App() {
         {/* Hero Banner */}
         <div className="relative w-full h-64 sm:h-80 overflow-hidden">
           <img
-            src="/banners/hero.jpg"
+            src="/banners/hero-buen-fin.png"
             alt="Ofertas destacadas"
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-black bg-opacity-20 flex items-center justify-center">
             <h1 className="text-white text-2xl sm:text-3xl md:text-4xl font-bold text-center px-4 drop-shadow">
-              Descubre tu estilo
+              
             </h1>
           </div>
         </div>
