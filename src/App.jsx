@@ -193,7 +193,7 @@ function App() {
         {/* Hero Banner */}
         <div className="relative w-full h-64 sm:h-80 overflow-hidden">
           <img
-            src="/banners/hero-compra-sin-miedo.png"
+            src="/banners/hero-compra-sin-miedo.jpeg"
             alt="Ofertas destacadas"
             className="w-full h-full object-cover"
           />
