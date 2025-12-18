@@ -75,6 +75,7 @@ const ProductDetail = () => {
   const handleVariantChange = (variant) => {
     setSelectedVariant(variant);
     setSelectedSize(null);
+    setThumbsSwiper(null); // Reset thumbs swiper cuando cambia variante
   };
 
   const handleAddToCart = () => {
@@ -164,10 +165,11 @@ const ProductDetail = () => {
             {/* Swiper principal */}
             <div className="relative rounded-3xl overflow-hidden bg-neutral-100 shadow-soft">
               <Swiper
+                key={`main-${selectedVariant.id}`}
                 modules={[Navigation, Pagination, Thumbs, Zoom]}
                 navigation
                 pagination={{ clickable: true }}
-                thumbs={thumbsSwiper && selectedVariant.imageUrls?.length > 1 ? { swiper: thumbsSwiper } : undefined}
+                thumbs={thumbsSwiper && !thumbsSwiper.destroyed && selectedVariant.imageUrls?.length > 1 ? { swiper: thumbsSwiper } : undefined}
                 zoom
                 className="aspect-[3/4]"
               >
@@ -211,16 +213,22 @@ const ProductDetail = () => {
             {/* Miniaturas - Solo mostrar si hay más de una imagen */}
             {selectedVariant.imageUrls && selectedVariant.imageUrls.length > 1 && (
               <Swiper
+                key={`thumbs-${selectedVariant.id}`}
                 onSwiper={setThumbsSwiper}
                 modules={[Thumbs]}
                 spaceBetween={12}
-                slidesPerView={4}
+                slidesPerView="auto"
+                breakpoints={{
+                  320: { slidesPerView: 3, spaceBetween: 8 },
+                  640: { slidesPerView: 4, spaceBetween: 12 },
+                  1024: { slidesPerView: 4, spaceBetween: 12 }
+                }}
                 watchSlidesProgress
                 className="thumbs-swiper"
               >
                 {selectedVariant.imageUrls.map((url, index) => (
-                  <SwiperSlide key={index}>
-                    <div className="aspect-square rounded-xl overflow-hidden cursor-pointer border-2 border-transparent hover:border-primary-500 transition-all">
+                  <SwiperSlide key={index} style={{ width: 'auto' }}>
+                    <div className="aspect-square rounded-xl overflow-hidden cursor-pointer border-2 border-transparent hover:border-primary-500 transition-all w-20 md:w-24">
                       <img
                         src={url}
                         alt={`Thumb ${index + 1}`}
