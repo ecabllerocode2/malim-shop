@@ -160,10 +160,10 @@ const ProductDetail = () => {
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5 }}
-            className="space-y-4"
+            className="space-y-4 min-w-0"
           >
-            {/* Swiper principal */}
-            <div className="relative rounded-3xl overflow-hidden bg-neutral-100 shadow-soft aspect-[3/4]">
+            {/* Contenedor con aspecto fijo */}
+            <div className="relative rounded-3xl overflow-hidden bg-neutral-100 shadow-soft aspect-[3/4] w-full">
               <Swiper
                 key={`main-${selectedVariant.id}`}
                 modules={[Navigation, Pagination, Thumbs, Zoom]}
@@ -171,11 +171,13 @@ const ProductDetail = () => {
                 pagination={{ clickable: true }}
                 thumbs={thumbsSwiper && !thumbsSwiper.destroyed ? { swiper: thumbsSwiper } : undefined}
                 zoom
-                className="w-full h-full"
+                observer={true}
+                observeParents={true}
+                className="absolute inset-0 w-full h-full"
               >
                 {selectedVariant.imageUrls.map((url, index) => (
                   <SwiperSlide key={index}>
-                    <div className="swiper-zoom-container h-full w-full">
+                    <div className="swiper-zoom-container">
                       <img
                         src={url}
                         alt={`${product.name} - ${index + 1}`}
@@ -200,7 +202,7 @@ const ProductDetail = () => {
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setIsFavorite(!isFavorite)}
-                className="absolute top-4 left-4 z-10 w-12 h-12 bg-white rounded-full shadow-medium flex items-center justify-center text-primary-600 hover:bg-primary-50 transition-colors"
+                className="absolute top-4 left-4 z-20 w-12 h-12 bg-white rounded-full shadow-medium flex items-center justify-center text-primary-600 hover:bg-primary-50 transition-colors"
               >
                 {isFavorite ? (
                   <FaHeart className="w-6 h-6" />
