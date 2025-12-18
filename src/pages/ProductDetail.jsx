@@ -163,19 +163,19 @@ const ProductDetail = () => {
             className="space-y-4"
           >
             {/* Swiper principal */}
-            <div className="relative rounded-3xl overflow-hidden bg-neutral-100 shadow-soft">
+            <div className="relative rounded-3xl overflow-hidden bg-neutral-100 shadow-soft aspect-[3/4]">
               <Swiper
                 key={`main-${selectedVariant.id}`}
                 modules={[Navigation, Pagination, Thumbs, Zoom]}
                 navigation
                 pagination={{ clickable: true }}
-                thumbs={thumbsSwiper && !thumbsSwiper.destroyed && selectedVariant.imageUrls?.length > 1 ? { swiper: thumbsSwiper } : undefined}
+                thumbs={thumbsSwiper && !thumbsSwiper.destroyed ? { swiper: thumbsSwiper } : undefined}
                 zoom
-                className="aspect-[3/4]"
+                className="w-full h-full"
               >
                 {selectedVariant.imageUrls.map((url, index) => (
                   <SwiperSlide key={index}>
-                    <div className="swiper-zoom-container">
+                    <div className="swiper-zoom-container h-full w-full">
                       <img
                         src={url}
                         alt={`${product.name} - ${index + 1}`}
