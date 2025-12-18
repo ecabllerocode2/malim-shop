@@ -75,13 +75,13 @@ const Hero = () => {
             >
               <Button
                 as={Link}
-                to="/catalogo?filter=nuevos"
+                to="/catalogo"
                 variant="primary"
                 size="lg"
                 icon={<FaArrowRight />}
                 iconPosition="right"
               >
-                Explorar Colección
+                Ver Catálogo
               </Button>
               <Button
                 as={Link}
