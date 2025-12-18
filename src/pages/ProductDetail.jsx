@@ -212,32 +212,32 @@ const ProductDetail = () => {
 
             {/* Miniaturas - Solo mostrar si hay más de una imagen */}
             {selectedVariant.imageUrls && selectedVariant.imageUrls.length > 1 && (
-              <Swiper
-                key={`thumbs-${selectedVariant.id}`}
-                onSwiper={setThumbsSwiper}
-                modules={[Thumbs]}
-                spaceBetween={12}
-                slidesPerView="auto"
-                breakpoints={{
-                  320: { slidesPerView: 3, spaceBetween: 8 },
-                  640: { slidesPerView: 4, spaceBetween: 12 },
-                  1024: { slidesPerView: 4, spaceBetween: 12 }
-                }}
-                watchSlidesProgress
-                className="thumbs-swiper"
-              >
-                {selectedVariant.imageUrls.map((url, index) => (
-                  <SwiperSlide key={index} style={{ width: 'auto' }}>
-                    <div className="aspect-square rounded-xl overflow-hidden cursor-pointer border-2 border-transparent hover:border-primary-500 transition-all w-20 md:w-24">
-                      <img
-                        src={url}
-                        alt={`Thumb ${index + 1}`}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </SwiperSlide>
-                ))}
-              </Swiper>
+              <div className="w-full overflow-hidden">
+                <Swiper
+                  key={`thumbs-${selectedVariant.id}`}
+                  onSwiper={setThumbsSwiper}
+                  modules={[Thumbs]}
+                  spaceBetween={8}
+                  slidesPerView={3}
+                  breakpoints={{
+                    640: { slidesPerView: 4, spaceBetween: 12 }
+                  }}
+                  watchSlidesProgress
+                  className="thumbs-swiper"
+                >
+                  {selectedVariant.imageUrls.map((url, index) => (
+                    <SwiperSlide key={index}>
+                      <div className="aspect-square rounded-xl overflow-hidden cursor-pointer border-2 border-transparent hover:border-primary-500 transition-all">
+                        <img
+                          src={url}
+                          alt={`Thumb ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </SwiperSlide>
+                  ))}
+                </Swiper>
+              </div>
             )}
           </motion.div>
 
