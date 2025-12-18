@@ -1,0 +1,82 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============================================
+    // FUNCIONES DE SEGURIDAD
+    // ============================================
+    
+    // Verifica si el usuario tiene el permiso de administrador (Custom Claim)
+    function isBackend() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+    
+    // Verifica si el usuario autenticado es el dueño del documento
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // ============================================
+    // REGLAS POR COLECCIÓN
+    // ============================================
+    
+    // PRODUCTOS: Público para lectura, escritura solo Admin
+    match /productos/{productId} {
+      // Permitir lectura de documentos individuales si publishOnline == true O si es admin
+      allow get: if resource.data.publishOnline == true || isBackend();
+      
+      // Permitir queries/list a todos (la app filtra por publishOnline en el cliente)
+      // Esto es más simple y evita problemas con índices
+      allow list: if true;
+      
+      // Solo el backend/admin puede escribir
+      allow create, update, delete: if isBackend();
+      
+      // Subcolecciones
+      match /{subcollection=**} {
+        allow read: if get(/databases/$(database)/documents/productos/$(productId)).data.publishOnline == true || isBackend();
+        allow write: if isBackend();
+      }
+    }
+    
+    // ÓRDENES Y PAGOS: Solo el dueño puede leer, solo el Backend (Admin) puede crear/editar
+    match /ordenes/{orderId} {
+      allow read: if isOwner(resource.data.userId) || isBackend();
+      allow write: if isBackend();
+    }
+    
+    match /pagos/{pagoId} {
+      allow read: if isOwner(resource.data.userId) || isBackend();
+      allow write: if isBackend();
+    }
+    
+    // CLIENTES: El usuario puede leer su propio perfil, Admin tiene acceso total
+    match /clientes/{clienteId} {
+      allow read: if isOwner(clienteId) || isBackend();
+      allow write: if isBackend();
+    }
+    
+    // COLECCIONES PRIVADAS: Solo accesibles por el Administrador/Backend
+    match /credenciales/{document=**} {
+      allow read, write: if isBackend();
+    }
+    
+    match /inventory_movements/{movementId} {
+      allow read, write: if isBackend();
+    }
+    
+    match /entregas/{entregaId} {
+      allow read, write: if isBackend();
+    }
+
+    // ============================================
+    // SEGURIDAD GLOBAL
+    // ============================================
+    
+    // Denegar cualquier acceso no especificado arriba
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

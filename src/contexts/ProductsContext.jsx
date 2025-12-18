@@ -1,7 +1,7 @@
 // src/contexts/ProductsContext.jsx
 import React, { createContext, useContext, useEffect, useReducer } from "react";
 import { db } from "../credenciales"; // ajusta si tu path es ./credenciales
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, orderBy } from "firebase/firestore";
 
 const ProductsContext = createContext();
 
@@ -75,15 +75,25 @@ export const ProductsProvider = ({ children }) => {
     const fetchProducts = async () => {
       dispatch({ type: "FETCH_START" });
       try {
-        const snap = await getDocs(collection(db, "disponible"));
-        const arr = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        // ordenar por fecha descendente (igual que tu lógica actual)
-        arr.sort((a, b) => new Date(b.fecha || "1970-01-01").getTime() - new Date(a.fecha || "1970-01-01").getTime());
+        // Query SIMPLE sin orderBy (evita necesidad de índice compuesto)
+        // Ordenaremos en memoria después
+        const q = query(
+          collection(db, "productos"),
+          where("publishOnline", "==", true)
+        );
+        
+        const snap = await getDocs(q);
+        let arr = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        
+        // Ordenar en memoria por dateAdded descendente
+        arr.sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
+        
         dispatch({ type: "SET_PRODUCTS", payload: arr });
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), products: arr }));
         } catch (e) {}
       } catch (err) {
+        console.error("Error al cargar productos:", err);
         dispatch({ type: "SET_ERROR", payload: err.message || String(err) });
       }
     };
@@ -96,14 +106,22 @@ export const ProductsProvider = ({ children }) => {
   const refresh = async () => {
     dispatch({ type: "FETCH_START" });
     try {
-      const snap = await getDocs(collection(db, "disponible"));
-      const arr = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      arr.sort((a, b) => new Date(b.fecha || "1970-01-01").getTime() - new Date(a.fecha || "1970-01-01").getTime());
+      const q = query(
+        collection(db, "productos"),
+        where("publishOnline", "==", true)
+      );
+      const snap = await getDocs(q);
+      let arr = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      // Ordenar en memoria por dateAdded descendente
+      arr.sort((a, b) => (b.dateAdded || 0) - (a.dateAdded || 0));
+      
       dispatch({ type: "SET_PRODUCTS", payload: arr });
       try {
         localStorage.setItem(CACHE_KEY, JSON.stringify({ timestamp: Date.now(), products: arr }));
       } catch (e) {}
     } catch (err) {
+      console.error("Error refreshing products:", err);
       dispatch({ type: "SET_ERROR", payload: err.message || String(err) });
     }
   };
@@ -115,21 +133,26 @@ export const ProductsProvider = ({ children }) => {
   const fetchProductById = async (id) => {
     if (state.byId[id]) return state.byId[id];
     try {
-      const ref = doc(db, "disponible", id);
+      const ref = doc(db, "productos", id);
       const snap = await getDoc(ref);
       if (snap.exists()) {
         const p = { id: snap.id, ...snap.data() };
-        dispatch({ type: "SET_PRODUCT", payload: p });
-        // opcional: actualizar localStorage (no obliga)
-        try {
-          const raw = localStorage.getItem(CACHE_KEY);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            parsed.products = [p, ...parsed.products.filter(x => x.id !== p.id)];
-            localStorage.setItem(CACHE_KEY, JSON.stringify(parsed));
-          }
-        } catch (e) {}
-        return p;
+        // Verificar que esté publicado
+        if (p.publishOnline) {
+          dispatch({ type: "SET_PRODUCT", payload: p });
+          // opcional: actualizar localStorage (no obliga)
+          try {
+            const raw = localStorage.getItem(CACHE_KEY);
+            if (raw) {
+              const parsed = JSON.parse(raw);
+              parsed.products = [p, ...parsed.products.filter(x => x.id !== p.id)];
+              localStorage.setItem(CACHE_KEY, JSON.stringify(parsed));
+            }
+          } catch (e) {}
+          return p;
+        } else {
+          throw new Error("Producto no disponible");
+        }
       } else {
         throw new Error("Producto no encontrado");
       }
