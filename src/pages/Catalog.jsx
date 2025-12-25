@@ -13,10 +13,8 @@ const Catalog = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { products, loading } = useProducts();
   
-  const [selectedCategory, setSelectedCategory] = useState(
-    searchParams.get('categoria') || 'all'
-  );
-  const [searchTerm, setSearchTerm] = useState(searchParams.get('busqueda') || '');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [showFilters, setShowFilters] = useState(false);
 
@@ -133,13 +131,9 @@ const Catalog = () => {
     const categoriaUrl = searchParams.get('categoria');
     const busquedaUrl = searchParams.get('busqueda');
     
-    if (categoriaUrl !== selectedCategory) {
-      setSelectedCategory(categoriaUrl || 'all');
-    }
-    if (busquedaUrl !== searchTerm) {
-      setSearchTerm(busquedaUrl || '');
-    }
-  }, [searchParams.toString()]);
+    setSelectedCategory(categoriaUrl || 'all');
+    setSearchTerm(busquedaUrl || '');
+  }, [searchParams]);
 
   return (
     <div className="min-h-screen bg-neutral-50 pb-20">

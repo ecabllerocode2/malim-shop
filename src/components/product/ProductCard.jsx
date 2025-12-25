@@ -14,11 +14,6 @@ const ProductCard = ({ product, index = 0 }) => {
     product.offerPercentage
   );
 
-  // Verificar si hay stock en alguna variante
-  const hasStock = product.variants?.some((variant) =>
-    variant.sizes?.some((size) => size.stock > 0)
-  );
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -48,11 +43,6 @@ const ProductCard = ({ product, index = 0 }) => {
               {hasDiscount && (
                 <Badge variant="discount" size="md">
                   -{product.offerPercentage}%
-                </Badge>
-              )}
-              {!hasStock && (
-                <Badge variant="default" size="sm">
-                  Bajo Pedido
                 </Badge>
               )}
             </div>

@@ -15,28 +15,23 @@ import {
   FaWhatsapp, 
   FaHeart, 
   FaRegHeart,
-  FaShoppingBag,
   FaShareAlt,
-  FaCheck,
-  FaTimes
+  FaCheck
 } from 'react-icons/fa';
-import { useCart } from '../contexts/CartContext';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
-import { formatPrice, calculateDiscountedPrice, getStockStatus } from '../utils/format';
+import { formatPrice, calculateDiscountedPrice } from '../utils/format';
 import { cn } from '../utils/cn';
 import { toast } from 'react-toastify';
 
 const ProductDetail = () => {
   const { productId } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
 
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [selectedSize, setSelectedSize] = useState(null);
-  const [quantity, setQuantity] = useState(1);
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
   const [isFavorite, setIsFavorite] = useState(false);
 
@@ -78,53 +73,22 @@ const ProductDetail = () => {
     setThumbsSwiper(null); // Reset thumbs swiper cuando cambia variante
   };
 
-  const handleAddToCart = () => {
-    if (!selectedSize || !selectedVariant) {
-      toast.warning('Por favor selecciona una talla');
-      return;
-    }
-
-    if (selectedSize.stock === 0) {
-      toast.info('Este producto está bajo pedido. Usa WhatsApp para consultar');
-      return;
-    }
-
-    if (selectedSize.stock < quantity) {
-      toast.warning(`Solo hay ${selectedSize.stock} unidades disponibles`);
-      return;
-    }
-
-    const finalPrice = calculateDiscountedPrice(
-      product.publicPrice,
-      product.offerPercentage
-    );
-
-    // Generar SKU si no existe
-    const variantSku = selectedSize.variantSku || `${product.id}-${selectedVariant.id}-${selectedSize.size}`;
-
-    addToCart({
-      productId: product.id,
-      productName: product.name,
-      variantId: selectedVariant.id,
-      colorName: selectedVariant.colorName,
-      hexColor: selectedVariant.hexColor,
-      size: selectedSize.size,
-      variantSku: variantSku,
-      quantity,
-      price: finalPrice,
-      imageUrl: selectedVariant.imageUrls[0],
-    });
-
-    setQuantity(1);
-  };
-
   const handleWhatsAppContact = () => {
+    if (!selectedVariant) {
+      toast.warning('Por favor selecciona un color');
+      return;
+    }
+
+    // Generar SKU si existe una talla seleccionada
+    const sku = selectedSize?.variantSku || `${product.id}-${selectedVariant.id}${selectedSize ? `-${selectedSize.size}` : ''}`;
+
     const message = `¡Hola! Me interesa el siguiente producto:
 
 📦 *${product.name}*
 🎨 Color: ${selectedVariant.colorName}
-📏 Talla: ${selectedSize?.size || 'Por confirmar'}
+${selectedSize ? `📏 Talla: ${selectedSize.size}` : ''}
 💰 Precio: ${formatPrice(calculateDiscountedPrice(product.publicPrice, product.offerPercentage))}
+🔖 SKU: ${sku}
 
 ¿Está disponible?`;
 
@@ -149,7 +113,6 @@ const ProductDetail = () => {
     product.offerPercentage
   );
   const hasDiscount = product.offerPercentage > 0;
-  const stockInfo = selectedSize ? getStockStatus(selectedSize.stock) : null;
 
   return (
     <div className="min-h-screen bg-white pb-20">
@@ -315,9 +278,7 @@ const ProductDetail = () => {
               </h3>
               <div className="grid grid-cols-4 gap-3">
                 {selectedVariant.sizes.map((size) => {
-                  const isAvailable = size.stock > 0;
                   const isSelected = selectedSize?.variantSku === size.variantSku;
-                  const isBajoPedido = size.stock === 0;
 
                   return (
                     <motion.button
@@ -326,101 +287,31 @@ const ProductDetail = () => {
                       whileTap={{ scale: 0.95 }}
                       onClick={() => setSelectedSize(size)}
                       className={cn(
-                        'px-4 py-3 rounded-xl font-semibold transition-all relative',
+                        'px-4 py-3 rounded-xl font-semibold transition-all',
                         isSelected
                           ? 'bg-primary-600 text-white shadow-soft'
                           : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
                       )}
                     >
                       {size.size}
-                      {isBajoPedido && (
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full border-2 border-white"></span>
-                      )}
                     </motion.button>
                   );
                 })}
               </div>
-
-              {/* Estado de stock */}
-              {selectedSize && (
-                <div className="mt-3">
-                  {selectedSize.stock === 0 ? (
-                    <Badge variant="warning">
-                      Bajo Pedido
-                    </Badge>
-                  ) : stockInfo ? (
-                    <Badge
-                      variant={
-                        stockInfo.status === 'out'
-                          ? 'default'
-                          : stockInfo.status === 'low'
-                          ? 'warning'
-                          : 'success'
-                      }
-                    >
-                      {stockInfo.label}
-                    </Badge>
-                  ) : null}
-                </div>
-              )}
             </div>
-
-            {/* Selector de cantidad */}
-            {selectedSize && selectedSize.stock > 0 && (
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Cantidad</h3>
-                <div className="flex items-center border-2 border-gray-300 rounded-xl w-fit overflow-hidden">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="px-6 py-3 hover:bg-gray-100 transition-colors"
-                  >
-                    -
-                  </button>
-                  <span className="px-8 py-3 font-semibold">{quantity}</span>
-                  <button
-                    onClick={() => setQuantity(Math.min(selectedSize.stock, quantity + 1))}
-                    className="px-6 py-3 hover:bg-gray-100 transition-colors"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            )}
 
             {/* Botones de acción */}
             <div className="space-y-3 pt-4">
-              {!selectedSize ? (
-                <Button
-                  variant="outline"
-                  size="lg"
-                  fullWidth
-                  disabled
-                >
-                  Selecciona una talla
-                </Button>
-              ) : selectedSize.stock > 0 ? (
-                <Button
-                  variant="primary"
-                  size="lg"
-                  fullWidth
-                  icon={<FaShoppingBag />}
-                  iconPosition="left"
-                  onClick={handleAddToCart}
-                >
-                  Añadir al Carrito
-                </Button>
-              ) : (
-                <Button
-                  variant="success"
-                  size="lg"
-                  fullWidth
-                  icon={<FaWhatsapp />}
-                  iconPosition="left"
-                  onClick={handleWhatsAppContact}
-                >
-                  Consultar Disponibilidad por WhatsApp
-                </Button>
-              )}
+              <Button
+                variant="success"
+                size="lg"
+                fullWidth
+                icon={<FaWhatsapp />}
+                iconPosition="left"
+                onClick={handleWhatsAppContact}
+              >
+                Comprar por WhatsApp
+              </Button>
 
               <div className="flex gap-3">
                 <Button

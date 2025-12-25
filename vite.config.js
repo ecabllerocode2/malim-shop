@@ -11,6 +11,8 @@ export default defineConfig({
       injectRegister: 'auto', // Inyecta automáticamente el código de registro del SW
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'], // Incluye todos los archivos necesarios
+        clientsClaim: true, // Tomar control inmediatamente
+        skipWaiting: true, // Activar nuevo SW sin esperar
       },
       manifest: {
         name: 'Malim Shop',

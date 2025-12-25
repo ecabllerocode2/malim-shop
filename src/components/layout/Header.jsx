@@ -4,13 +4,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FaSearch, 
-  FaShoppingBag, 
   FaBars, 
   FaTimes,
   FaHeart,
   FaUser 
 } from 'react-icons/fa';
-import { useCart } from '../../contexts/CartContext';
 import { cn } from '../../utils/cn';
 import Button from '../ui/Button';
 import logo from '../../logo.png';
@@ -21,7 +19,6 @@ const Header = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
-  const { getTotalItems, setIsOpen: setCartOpen } = useCart();
   const navigate = useNavigate();
 
   // Detectar scroll para cambiar estilo del header
@@ -42,13 +39,11 @@ const Header = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/catalogo?search=${encodeURIComponent(searchQuery)}`);
+      navigate(`/catalogo?busqueda=${encodeURIComponent(searchQuery)}`);
       setIsSearchOpen(false);
       setSearchQuery('');
     }
   };
-
-  const totalItems = getTotalItems();
 
   const navigation = [
     { name: 'Inicio', href: '/' },
@@ -109,25 +104,6 @@ const Header = () => {
               >
                 <FaSearch className="w-5 h-5" />
               </motion.button>
-
-              {/* Carrito */}
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setCartOpen(true)}
-                className="relative text-gray-700 hover:text-primary-600 transition-colors"
-              >
-                <FaShoppingBag className="w-5 h-5" />
-                {totalItems > 0 && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className="absolute -top-2 -right-2 w-5 h-5 bg-primary-600 text-white text-xs font-bold rounded-full flex items-center justify-center"
-                  >
-                    {totalItems}
-                  </motion.span>
-                )}
-              </motion.button>
             </div>
 
             {/* Botones Mobile */}
@@ -139,20 +115,6 @@ const Header = () => {
                 className="text-gray-700"
               >
                 <FaSearch className="w-5 h-5" />
-              </motion.button>
-
-              {/* Carrito Mobile */}
-              <motion.button
-                whileTap={{ scale: 0.9 }}
-                onClick={() => setCartOpen(true)}
-                className="relative text-gray-700"
-              >
-                <FaShoppingBag className="w-5 h-5" />
-                {totalItems > 0 && (
-                  <span className="absolute -top-2 -right-2 w-5 h-5 bg-primary-600 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                    {totalItems}
-                  </span>
-                )}
               </motion.button>
 
               {/* Menú Hamburguesa */}
