@@ -41,7 +41,7 @@ const ProductDetail = () => {
 
   const loadProduct = async () => {
     try {
-      const docRef = doc(db, 'productos', productId);
+      const docRef = doc(db, 'productos_public', productId);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {

@@ -78,7 +78,7 @@ export const ProductsProvider = ({ children }) => {
         // Query SIMPLE sin orderBy (evita necesidad de índice compuesto)
         // Ordenaremos en memoria después
         const q = query(
-          collection(db, "productos"),
+          collection(db, "productos_public"),
           where("publishOnline", "==", true)
         );
         
@@ -107,7 +107,7 @@ export const ProductsProvider = ({ children }) => {
     dispatch({ type: "FETCH_START" });
     try {
       const q = query(
-        collection(db, "productos"),
+        collection(db, "productos_public"),
         where("publishOnline", "==", true)
       );
       const snap = await getDocs(q);
@@ -133,7 +133,7 @@ export const ProductsProvider = ({ children }) => {
   const fetchProductById = async (id) => {
     if (state.byId[id]) return state.byId[id];
     try {
-      const ref = doc(db, "productos", id);
+      const ref = doc(db, "productos_public", id);
       const snap = await getDoc(ref);
       if (snap.exists()) {
         const p = { id: snap.id, ...snap.data() };

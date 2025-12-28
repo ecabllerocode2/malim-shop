@@ -8,11 +8,11 @@ export const diagnosticarEstructura = async () => {
 
   try {
     // Obtener un producto de ejemplo
-    const q = query(collection(db, 'productos'), limit(1));
+    const q = query(collection(db, 'productos_public'), limit(1));
     const snapshot = await getDocs(q);
     
     if (snapshot.empty) {
-      console.log('❌ No se encontraron productos en la colección "productos"');
+      console.log('❌ No se encontraron productos en la colección "productos_public"');
       return;
     }
 

@@ -21,22 +21,23 @@ service cloud.firestore {
     // REGLAS POR COLECCIÓN
     // ============================================
     
-    // PRODUCTOS: Público para lectura, escritura solo Admin
+    // PRODUCTOS_PUBLIC: Colección pública solo lectura (sin datos sensibles)
+    match /productos_public/{productId} {
+      // Permitir lectura completa a todos los usuarios
+      allow read: if true;
+      
+      // Solo el backend puede escribir
+      allow write: if isBackend();
+    }
+    
+    // PRODUCTOS: Solo accesible por Admin (contiene datos sensibles)
     match /productos/{productId} {
-      // Permitir lectura de documentos individuales si publishOnline == true O si es admin
-      allow get: if resource.data.publishOnline == true || isBackend();
-      
-      // Permitir queries/list a todos (la app filtra por publishOnline en el cliente)
-      // Esto es más simple y evita problemas con índices
-      allow list: if true;
-      
-      // Solo el backend/admin puede escribir
-      allow create, update, delete: if isBackend();
+      // Solo el backend/admin puede leer y escribir
+      allow read, write: if isBackend();
       
       // Subcolecciones
       match /{subcollection=**} {
-        allow read: if get(/databases/$(database)/documents/productos/$(productId)).data.publishOnline == true || isBackend();
-        allow write: if isBackend();
+        allow read, write: if isBackend();
       }
     }
     

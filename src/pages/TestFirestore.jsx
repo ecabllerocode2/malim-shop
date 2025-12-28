@@ -17,14 +17,14 @@ const TestFirestore = () => {
       setStatus('1️⃣ Probando conexión a Firestore...');
       
       // Test 1: Leer colección sin filtros
-      setStatus('2️⃣ Leyendo colección "productos" (sin filtros)...');
-      const allSnap = await getDocs(collection(db, 'productos'));
+      setStatus('2️⃣ Leyendo colección "productos_public" (sin filtros)...');
+      const allSnap = await getDocs(collection(db, 'productos_public'));
       alert(`✅ Conexión exitosa!\n\n${allSnap.size} documentos encontrados en total`);
       
       // Test 2: Con filtro publishOnline
       setStatus('3️⃣ Filtrando por publishOnline = true...');
       const q = query(
-        collection(db, 'productos'),
+        collection(db, 'productos_public'),
         where('publishOnline', '==', true)
       );
       const filteredSnap = await getDocs(q);
