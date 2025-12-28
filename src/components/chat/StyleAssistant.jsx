@@ -9,9 +9,11 @@ import {
   FaUser
 } from 'react-icons/fa';
 import { useAuth } from '../../contexts/AuthContext';
-import PhoneAuth from '../auth/PhoneAuth';
+import UserAuth from '../auth/UserAuth';
+import UserDataForm from '../auth/UserDataForm';
 import Button from '../ui/Button';
 import { BACKEND_API_URL } from '../../credenciales';
+import { saveUserData, getUserData } from '../../services/authService';
 
 // URL del endpoint
 const API_ENDPOINT = `${BACKEND_API_URL}/api/asesor-estilo`;
@@ -21,10 +23,12 @@ const StyleAssistant = ({ isOpen, onClose }) => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPhoneAuth, setShowPhoneAuth] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
+  const [showUserDataForm, setShowUserDataForm] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [userMessageCount, setUserMessageCount] = useState(0);
+  const [userData, setUserData] = useState(null);
   
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -48,12 +52,26 @@ const StyleAssistant = ({ isOpen, onClose }) => {
   // Limpiar al cerrar
   useEffect(() => {
     if (!isOpen) {
-      setShowPhoneAuth(false);
+      setShowAuth(false);
+      setShowUserDataForm(false);
       setSelectedImage(null);
       setImagePreview(null);
       setUserMessageCount(0);
     }
   }, [isOpen]);
+
+  // Cargar datos del usuario al autenticarse
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (user && !userData) {
+        const result = await getUserData(user.uid);
+        if (result.success && result.data) {
+          setUserData(result.data);
+        }
+      }
+    };
+    loadUserData();
+  }, [user]);
 
   /**
    * Enviar mensaje al backend
@@ -139,7 +157,7 @@ const StyleAssistant = ({ isOpen, onClose }) => {
           requiresAuth: true,
           timestamp: new Date()
         }]);
-        setShowPhoneAuth(true);
+        setShowAuth(true);
         return;
       }
 
@@ -204,11 +222,45 @@ const StyleAssistant = ({ isOpen, onClose }) => {
   /**
    * Manejar éxito de autenticación
    */
-  const handleAuthSuccess = (newUser, newToken) => {
+  const handleAuthSuccess = async (newUser, newToken, isNewUser) => {
     updateUser(newUser, newToken);
-    setShowPhoneAuth(false);
+    setShowAuth(false);
     
-    // Reenviar el último mensaje del usuario ahora con autenticación
+    // Si es nuevo usuario o no tiene datos completos, mostrar formulario
+    const result = await getUserData(newUser.uid);
+    if (!result.success || !result.data || !result.data.whatsapp) {
+      setShowUserDataForm(true);
+    } else {
+      setUserData(result.data);
+      // Reenviar el último mensaje del usuario ahora con autenticación
+      resendLastUserMessage();
+    }
+  };
+
+  /**
+   * Manejar datos adicionales del usuario
+   */
+  const handleUserDataComplete = async (data) => {
+    if (!user) return;
+    
+    // Guardar datos en Firestore
+    const result = await saveUserData(user.uid, data);
+    
+    if (result.success) {
+      setUserData(data);
+      setShowUserDataForm(false);
+      
+      // Reenviar el último mensaje del usuario ahora con datos completos
+      resendLastUserMessage();
+    } else {
+      throw new Error('Error al guardar datos');
+    }
+  };
+
+  /**
+   * Reenviar el último mensaje del usuario
+   */
+  const resendLastUserMessage = () => {
     const lastUserMessage = messages
       .filter(m => m.role === 'user')
       .pop();
@@ -275,7 +327,7 @@ const StyleAssistant = ({ isOpen, onClose }) => {
                   Mia
                 </h2>
                 <p className="text-xs sm:text-sm text-white/90">
-                  {user ? `✓ ${user.phoneNumber}` : 'Tu asesora de estilo'}
+                  {user && userData ? `✓ ${userData.nombre}` : user ? `✓ ${user.email || user.displayName}` : 'Tu asesora de estilo'}
                 </p>
               </div>
             </div>
@@ -336,9 +388,9 @@ const StyleAssistant = ({ isOpen, onClose }) => {
             </div>
           </div>
 
-          {/* Phone Auth Panel */}
+          {/* Auth Panel */}
           <AnimatePresence>
-            {showPhoneAuth && (
+            {showAuth && (
               <motion.div
                 initial={{ height: 0, opacity: 0 }}
                 animate={{ height: 'auto', opacity: 1 }}
@@ -346,9 +398,26 @@ const StyleAssistant = ({ isOpen, onClose }) => {
                 className="border-t overflow-hidden"
               >
                 <div className="p-4 sm:p-6">
-                  <PhoneAuth
+                  <UserAuth
                     onSuccess={handleAuthSuccess}
-                    onCancel={() => setShowPhoneAuth(false)}
+                    onCancel={() => setShowAuth(false)}
+                  />
+                </div>
+              </motion.div>
+            )}
+            
+            {showUserDataForm && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="border-t overflow-hidden"
+              >
+                <div className="p-4 sm:p-6">
+                  <UserDataForm
+                    onComplete={handleUserDataComplete}
+                    initialName={user?.displayName || ''}
+                    userEmail={user?.email || ''}
                   />
                 </div>
               </motion.div>
@@ -356,7 +425,7 @@ const StyleAssistant = ({ isOpen, onClose }) => {
           </AnimatePresence>
 
           {/* Input Area */}
-          {!showPhoneAuth && (
+          {!showAuth && !showUserDataForm && (
             <div className="border-t bg-white p-3 sm:p-4">
               {/* Image Preview */}
               <AnimatePresence>

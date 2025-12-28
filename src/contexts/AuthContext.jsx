@@ -2,13 +2,14 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { auth } from '../credenciales';
 import { onAuthStateChanged } from 'firebase/auth';
-import { getCurrentUser, logout as authLogout } from '../services/authService';
+import { getCurrentUser, logout as authLogout, getUserData } from '../services/authService';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [idToken, setIdToken] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,11 +21,18 @@ export const AuthProvider = ({ children }) => {
         if (userData) {
           setUser(userData.user);
           setIdToken(userData.idToken);
+          
+          // Cargar datos adicionales del usuario
+          const userDataResult = await getUserData(firebaseUser.uid);
+          if (userDataResult.success && userDataResult.data) {
+            setUserData(userDataResult.data);
+          }
         }
       } else {
         // No autenticado
         setUser(null);
         setIdToken(null);
+        setUserData(null);
       }
       setLoading(false);
     });
@@ -65,6 +73,7 @@ export const AuthProvider = ({ children }) => {
       await authLogout();
       setUser(null);
       setIdToken(null);
+      setUserData(null);
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
       throw error;
@@ -74,6 +83,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     idToken,
+    userData,
     loading,
     isAuthenticated: !!user,
     refreshToken,
