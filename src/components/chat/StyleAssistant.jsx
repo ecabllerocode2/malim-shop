@@ -24,6 +24,7 @@ const StyleAssistant = ({ isOpen, onClose }) => {
   const [showPhoneAuth, setShowPhoneAuth] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [userMessageCount, setUserMessageCount] = useState(0);
   
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -50,6 +51,7 @@ const StyleAssistant = ({ isOpen, onClose }) => {
       setShowPhoneAuth(false);
       setSelectedImage(null);
       setImagePreview(null);
+      setUserMessageCount(0);
     }
   }, [isOpen]);
 
@@ -74,19 +76,26 @@ const StyleAssistant = ({ isOpen, onClose }) => {
     setImagePreview(null);
     setLoading(true);
 
+    // Incrementar contador de mensajes del usuario
+    const currentMessageCount = userMessageCount + 1;
+    setUserMessageCount(currentMessageCount);
+
     try {
       const requestBody = {
         mensaje: messageText.trim() || 'Analiza esta imagen',
-        imagen: imageBase64
+        imagen: imageBase64,
+        idToken: null
       };
 
-      // Si el usuario está logeado, incluir idToken
-      if (idToken) {
+      // Enviar idToken solo desde el segundo mensaje en adelante y si el usuario está autenticado
+      if (currentMessageCount >= 2 && idToken) {
         requestBody.idToken = idToken;
       }
 
       console.log('🚀 Enviando mensaje al endpoint:', API_ENDPOINT);
-      console.log('📦 Body:', { ...requestBody, imagen: imageBase64 ? '(imagen presente)' : null });
+      console.log('� Mensaje #:', currentMessageCount);
+      console.log('🔐 Envía token:', !!requestBody.idToken);
+      console.log('�📦 Body:', { ...requestBody, imagen: imageBase64 ? '(imagen presente)' : null });
       console.log('🌐 Origin actual:', window.location.origin);
 
       const response = await fetch(API_ENDPOINT, {
