@@ -3,6 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc, query, where, Timestamp, getDocs } from "firebase/firestore";
 import { getMessaging, getToken } from "firebase/messaging";
 import { getAnalytics } from "firebase/analytics";
+import { getAuth } from "firebase/auth";
 
 // Configuración de Firebase
 const firebaseConfig = {
@@ -27,8 +28,14 @@ const messaging = getMessaging(app);
 // Analytics (solo si window existe)
 const analytics = typeof window !== "undefined" ? getAnalytics(app) : null;
 
+// Auth
+const auth = getAuth(app);
+
+// Backend API
+export const BACKEND_API_URL = 'https://malim-backend.vercel.app';
+
 // Exporta instancias
-export { db, messaging, analytics };
+export { db, messaging, analytics, auth };
 
 export const generateToken = async () => {
   const permission = await Notification.requestPermission();
