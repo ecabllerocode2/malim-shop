@@ -273,23 +273,25 @@ export async function signInWithEmail(email, password) {
  */
 
 /**
- * Guardar datos adicionales del usuario en Firestore
+ * Guardar datos adicionales del usuario - SOLO LOCALMENTE
+ * El guardado en Firestore lo hace el backend por seguridad
  * @param {string} userId - ID del usuario de Firebase
  * @param {object} data - Datos adicionales (nombre, whatsapp, etc.)
  * @returns {Promise<{success: boolean, error?: string}>}
  */
 export async function saveUserData(userId, data) {
   try {
-    const userRef = doc(db, 'usuarios', userId);
-    await setDoc(userRef, {
+    // Guardar en localStorage temporalmente
+    // El backend guardará en Firestore cuando se envíe el primer mensaje
+    localStorage.setItem(`userData_${userId}`, JSON.stringify({
       ...data,
       updatedAt: new Date().toISOString()
-    }, { merge: true });
+    }));
     
-    console.log('✅ Datos de usuario guardados en Firestore');
+    console.log('✅ Datos de usuario guardados localmente (el backend los guardará en Firestore)');
     return { success: true };
   } catch (error) {
-    console.error('❌ Error al guardar datos:', error);
+    console.error('❌ Error al guardar datos localmente:', error);
     return { success: false, error: error.message };
   }
 }
@@ -301,11 +303,21 @@ export async function saveUserData(userId, data) {
  */
 export async function getUserData(userId) {
   try {
-    const userRef = doc(db, 'usuarios', userId);
+    // Primero intentar desde localStorage
+    const localData = localStorage.getItem(`userData_${userId}`);
+    if (localData) {
+      return { success: true, data: JSON.parse(localData) };
+    }
+    
+    // Si no hay datos locales, intentar desde Firestore (solo lectura)
+    const userRef = doc(db, 'users_asistant', userId);
     const docSnap = await getDoc(userRef);
     
     if (docSnap.exists()) {
-      return { success: true, data: docSnap.data() };
+      const data = docSnap.data();
+      // Guardar en localStorage para futuras consultas
+      localStorage.setItem(`userData_${userId}`, JSON.stringify(data));
+      return { success: true, data };
     } else {
       return { success: true, data: null };
     }

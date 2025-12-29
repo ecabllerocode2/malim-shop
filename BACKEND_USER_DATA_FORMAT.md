@@ -4,18 +4,21 @@
 
 Se implementó autenticación gratuita con Firebase (Google Sign-In y Email/Password) + captura obligatoria de datos adicionales (nombre y WhatsApp) para marketing.
 
+**IMPORTANTE**: El frontend captura los datos pero **NO los guarda en Firestore**. Los envía al backend en cada request y el backend los guarda usando Firebase Admin SDK (con permisos totales).
+
 ## Nuevo Flujo de Autenticación
 
 1. **Usuario se autentica** con Google o Email/Password (gratuito)
-2. **Sistema captura** nombre completo y número de WhatsApp
-3. **Datos se guardan** en Firestore (`usuarios/{userId}`)
-4. **idToken incluye** estos datos cuando llama al backend
+2. **Frontend captura** nombre completo y número de WhatsApp
+3. **Frontend guarda temporalmente** en localStorage
+4. **Frontend envía userData** en cada request al backend
+5. **Backend guarda** en Firestore (`users_asistant/{userId}`) usando Admin SDK
 
 ---
 
 ## Estructura de Datos del Usuario en Firebase
 
-### Colección: `usuarios/{userId}`
+### Colección: `users_asistant/{userId}`
 
 ```javascript
 {
@@ -73,77 +76,62 @@ El `idToken` que recibes en el backend ahora incluye:
 
 ## Cómo Obtener los Datos Adicionales en el Backend
 
-### Opción 1: Consultar Firestore (Recomendado)
+### ✅ Opción Recomendada: Usar los datos que envía el frontend
+
+El frontend envía `userData` en cada request cuando el usuario está autenticado:
 
 ```javascript
-const admin = require('firebase-admin');
-const db = admin.firestore();
-
-async function getUserData(userId) {
-  const userDoc = await db.collection('usuarios').doc(userId).get();
-  
-  if (!userDoc.exists) {
-    throw new Error('Usuario no encontrado');
-  }
-  
-  return userDoc.data();
-}
-
-// Uso en el endpoint
-app.post('/api/asesor-estilo', async (req, res) => {
-  const { idToken, mensaje } = req.body;
-  
-  // Verificar token
-  const decodedToken = await admin.auth().verifyIdToken(idToken);
-  const userId = decodedToken.uid;
-  
-  // Obtener datos adicionales
-  const userData = await getUserData(userId);
-  
-  console.log('Usuario:', userData.nombre);
-  console.log('WhatsApp:', userData.whatsapp);
-  console.log('Email:', userData.email);
-  
-  // ... resto de la lógica
-});
-```
-
-### Opción 2: Frontend Envía los Datos (Alternativa)
-
-Si prefieres que el frontend envíe los datos en cada request:
-
-```javascript
-// Request del frontend
-{
-  "mensaje": "Busco ropa elegante",
-  "idToken": "eyJhbGciOiJSUzI1...",
-  "userData": {
-    "nombre": "María García",
-    "whatsapp": "5551234567",
-    "email": "maria@example.com"
-  }
-}
-
-// Backend valida el token y usa userData
 app.post('/api/asesor-estilo', async (req, res) => {
   const { idToken, mensaje, userData } = req.body;
   
-  // Verificar token
+  // 1. Verificar token
   const decodedToken = await admin.auth().verifyIdToken(idToken);
+  const userId = decodedToken.uid;
   
-  // Validar que el email coincida (seguridad)
-  if (userData.email !== decodedToken.email) {
+  // 2. Validar que el email coincida (seguridad)
+  if (userData && userData.email !== decodedToken.email) {
     return res.status(401).json({ 
       success: false, 
       error: 'Datos de usuario no coinciden' 
     });
   }
   
-  console.log('Usuario:', userData.nombre);
-  console.log('WhatsApp:', userData.whatsapp);
+  // 3. Guardar/actualizar en Firestore usando tu función existente
+  if (userData) {
+    await saveUserForRemarketing(
+      { uid: userId, email: decodedToken.email, ...decodedToken },
+      userData  // { nombre, whatsapp }
+    );
+    
+    console.log('✅ Datos guardados:', userData.nombre, userData.whatsapp);
+  }
   
   // ... resto de la lógica
 });
+```
+
+### Cambios Necesarios en tu Backend Actual
+
+Tu función `saveUserForRemarketing()` ya está casi perfecta. Solo necesitas asegurarte de usar `userData` del request:
+
+```javascript
+// ANTES: Intentaba leer de colección "usuarios" (que no existe)
+try {
+    const usuarioDoc = await db.collection('usuarios').doc(userAuth.uid).get();
+    if (usuarioDoc.exists) {
+        const usuarioData = usuarioDoc.data();
+        nombre = usuarioData.nombre || nombre;
+        whatsapp = usuarioData.whatsapp || whatsapp;
+    }
+} catch (err) {
+    console.log('⚠️ No se pudieron obtener datos adicionales de usuarios');
+}
+
+// DESPUÉS: Usar los datos que envía el frontend
+let nombre = userAuth.displayName || additionalData.nombre || null;
+let whatsapp = additionalData.whatsapp || null;
+
+// Ya no necesitas leer de otra colección, el frontend envía todo
 ```
 
 ---
@@ -157,13 +145,21 @@ app.post('/api/asesor-estilo', async (req, res) => {
   "mensaje": "Busco ropa elegante para la oficina",
   "imagen": null,  // o base64 con imagen
   "idToken": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjE...",
-  "userData": {    // Opcional si consultas Firestore
+  "userData": {    // IMPORTANTE: El frontend SIEMPRE envía esto cuando está autenticado
     "nombre": "María García López",
     "whatsapp": "5551234567",
     "email": "maria@example.com"
   }
 }
 ```
+
+### ⚠️ IMPORTANTE - Seguridad
+
+El **frontend NO guarda en Firestore**, solo envía los datos al backend. El backend debe:
+
+1. Verificar el `idToken`
+2. Validar que `userData.email` coincida con el email del token
+3. Guardar en Firestore usando la función existente `saveUserForRemarketing()`
 
 ---
 
@@ -349,7 +345,7 @@ app.post('/api/asesor-estilo', async (req, res) => {
         userId = decodedToken.uid;
         
         // Obtener datos adicionales de Firestore
-        const userDoc = await db.collection('usuarios').doc(userId).get();
+        const userDoc = await db.collection('users_asistant').doc(userId).get();
         if (userDoc.exists) {
           userData = userDoc.data();
           
@@ -476,7 +472,7 @@ await sendEmailVerification(user);
 ### Verificar en Firestore Console
 
 1. Ir a Firebase Console → Firestore Database
-2. Buscar colección `usuarios`
+2. Buscar colección `users_asistant`
 3. Verificar que cada usuario autenticado tenga sus datos completos
 
 ---

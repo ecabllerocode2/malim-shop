@@ -102,18 +102,29 @@ const StyleAssistant = ({ isOpen, onClose }) => {
       const requestBody = {
         mensaje: messageText.trim() || 'Analiza esta imagen',
         imagen: imageBase64,
-        idToken: null
+        idToken: null,
+        userData: null
       };
 
       // Enviar idToken solo desde el segundo mensaje en adelante y si el usuario está autenticado
       if (currentMessageCount >= 2 && idToken) {
         requestBody.idToken = idToken;
+        
+        // Enviar userData si existe para que el backend lo guarde
+        if (user && userData) {
+          requestBody.userData = {
+            nombre: userData.nombre,
+            whatsapp: userData.whatsapp,
+            email: user.email
+          };
+        }
       }
 
       console.log('🚀 Enviando mensaje al endpoint:', API_ENDPOINT);
-      console.log('� Mensaje #:', currentMessageCount);
+      console.log('📊 Mensaje #:', currentMessageCount);
       console.log('🔐 Envía token:', !!requestBody.idToken);
-      console.log('�📦 Body:', { ...requestBody, imagen: imageBase64 ? '(imagen presente)' : null });
+      console.log('👤 Envía userData:', !!requestBody.userData);
+      console.log('📦 Body:', { ...requestBody, imagen: imageBase64 ? '(imagen presente)' : null, userData: requestBody.userData ? '(presente)' : null });
       console.log('🌐 Origin actual:', window.location.origin);
 
       const response = await fetch(API_ENDPOINT, {

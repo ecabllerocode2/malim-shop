@@ -58,6 +58,18 @@ service cloud.firestore {
       allow write: if isBackend();
     }
     
+    // USERS_ASISTANT: Datos del usuario manejados por el backend (solo lectura desde cliente)
+    match /users_asistant/{userId} {
+      allow read: if isOwner(userId) || isBackend();
+      allow write: if isBackend();  // Solo el backend puede escribir
+    }
+    
+    // MARKETING_CONTACTS: Solo el backend puede escribir
+    match /marketing_contacts/{userId} {
+      allow read: if isOwner(userId) || isBackend();
+      allow write: if isBackend();
+    }
+    
     // COLECCIONES PRIVADAS: Solo accesibles por el Administrador/Backend
     match /credenciales/{document=**} {
       allow read, write: if isBackend();
