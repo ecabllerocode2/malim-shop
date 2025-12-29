@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import ProductRecommendationCard from './ProductRecommendationCard';
 import { db } from '../../credenciales';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 
 const MessageWithProducts = ({ content, mode }) => {
   const [products, setProducts] = useState([]);
@@ -18,54 +18,84 @@ const MessageWithProducts = ({ content, mode }) => {
 
   /**
    * Extraer SKUs de la respuesta
+   * Soporta caracteres especiales como acentos: MAL-SUÉ-SUÉ-YJOLS
    */
   const extractSKUs = (text) => {
     const skuPatterns = [
-      /SKU:\s*([A-Z0-9-]+)/gi,
-      /producto\/([A-Z0-9-]+)/gi,
-      /\b([A-Z]{2,3}-\d{3})\b/g
+      // SKU: MAL-SUÉ-SUÉ-YJOLS o SKU:MAL-001
+      /SKU:\s*([A-ZÀ-ÿ0-9-]+)/gi,
+      // /producto/MAL-001
+      /producto\/([A-ZÀ-ÿ0-9-]+)/gi,
+      // Patrón general: XX-XXX (2-3 letras - dígitos)
+      /\b([A-ZÀ-ÿ]{2,3}-[A-ZÀ-ÿ0-9]{3,})\b/g
     ];
     
     const skus = new Set();
     skuPatterns.forEach(pattern => {
       const matches = text.matchAll(pattern);
       for (const match of matches) {
-        skus.add(match[1]);
+        // Limpiar espacios extras
+        const sku = match[1].trim();
+        if (sku) skus.add(sku);
       }
     });
     
+    console.log('🔍 SKUs detectados:', Array.from(skus));
     return Array.from(skus);
   };
 
   /**
-   * Obtener productos desde Firestore
+   * Obtener productos desde Firestore usando los IDs de documento (SKUs)
    */
   const extractAndFetchProducts = async () => {
     const skus = extractSKUs(content);
     
-    if (skus.length === 0) return;
+    if (skus.length === 0) {
+      console.log('⚠️ No se detectaron SKUs en el mensaje');
+      return;
+    }
     
     setLoading(true);
     try {
-      const productsRef = collection(db, 'productos_public');
-      const q = query(productsRef, where('productSku', 'in', skus.slice(0, 10))); // Máximo 10
-      const snapshot = await getDocs(q);
+      console.log('📦 Buscando productos con SKUs:', skus);
       
+      // En Firestore, el SKU ES el ID del documento
+      // Obtener cada documento directamente por su ID
       const fetchedProducts = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
-        fetchedProducts.push({
-          sku: data.productSku,
-          name: data.name,
-          price: data.publicPrice,
-          offer: data.offerPercentage || 0,
-          category: data.category,
-          image: data.mainImage || data.variants?.[0]?.images?.[0] || null,
-          colors: data.variants?.map(v => v.colorName).filter(Boolean) || [],
-          description: data.shortDetails || ''
-        });
-      });
       
+      for (const sku of skus.slice(0, 10)) { // Máximo 10 productos
+        try {
+          const docRef = doc(db, 'productos_public', sku);
+          const docSnap = await getDoc(docRef);
+          
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            // Solo agregar si está publicado online
+            if (data.publishOnline === true) {
+              fetchedProducts.push({
+                sku: docSnap.id,
+                name: data.name,
+                price: data.publicPrice,
+                offer: data.offerPercentage || 0,
+                category: data.category,
+                image: data.mainImage || data.variants?.[0]?.images?.[0] || null,
+                colors: data.variants?.map(v => v.colorName).filter(Boolean) || [],
+                description: data.shortDetails || ''
+              });
+              console.log(`✅ Producto encontrado: ${data.name} (${sku})`);
+            } else {
+              console.log(`⚠️ Producto ${sku} no está publicado online`);
+            }
+          } else {
+            console.log(`❌ Producto ${sku} no existe en Firestore`);
+          }
+        } catch (error) {
+          console.error(`Error al obtener producto ${sku}:`, error);
+        }
+      }
+      
+      console.log(`🎉 Total de productos encontrados: ${fetchedProducts.length}`);
       setProducts(fetchedProducts);
     } catch (error) {
       console.error('Error al obtener productos:', error);
