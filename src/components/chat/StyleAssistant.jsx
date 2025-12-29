@@ -11,6 +11,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import UserAuth from '../auth/UserAuth';
 import UserDataForm from '../auth/UserDataForm';
+import MessageWithProducts from './MessageWithProducts';
 import Button from '../ui/Button';
 import { BACKEND_API_URL } from '../../credenciales';
 import { saveUserData, getUserData } from '../../services/authService';
@@ -283,31 +284,6 @@ const StyleAssistant = ({ isOpen, onClose }) => {
     }
   };
 
-  /**
-   * Formatear mensaje para mostrar enlaces clickeables
-   */
-  const formatMessage = (content) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const parts = content.split(urlRegex);
-    
-    return parts.map((part, index) => {
-      if (urlRegex.test(part)) {
-        return (
-          <a
-            key={index}
-            href={part}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-pink-600 underline hover:text-pink-700"
-          >
-            Ver producto
-          </a>
-        );
-      }
-      return <span key={index}>{part}</span>;
-    });
-  };
-
   if (!isOpen) return null;
 
   return (
@@ -361,24 +337,30 @@ const StyleAssistant = ({ isOpen, onClose }) => {
                   transition={{ delay: idx * 0.05 }}
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div
-                    className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 ${
-                      msg.role === 'assistant'
-                        ? 'bg-white border-2 border-pink-200 text-gray-800'
-                        : msg.role === 'system'
-                        ? 'bg-yellow-50 border-2 border-yellow-200 text-yellow-800'
-                        : 'bg-gradient-to-br from-pink-500 to-purple-600 text-white'
-                    }`}
-                  >
-                    <div className="text-sm sm:text-base whitespace-pre-wrap break-words">
-                      {formatMessage(msg.content)}
+                  {msg.role === 'assistant' ? (
+                    // Mensaje del asistente con detección de productos
+                    <div className="max-w-[95%] sm:max-w-[85%] bg-white border-2 border-pink-200 text-gray-800 rounded-2xl px-4 py-3">
+                      <MessageWithProducts content={msg.content} mode={msg.mode} />
                     </div>
-                    {msg.hasImage && (
-                      <div className="mt-2 text-xs opacity-75">
-                        📷 Imagen adjunta
+                  ) : (
+                    // Mensaje del usuario o sistema
+                    <div
+                      className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-4 py-3 ${
+                        msg.role === 'system'
+                          ? 'bg-yellow-50 border-2 border-yellow-200 text-yellow-800'
+                          : 'bg-gradient-to-br from-pink-500 to-purple-600 text-white'
+                      }`}
+                    >
+                      <div className="text-sm sm:text-base whitespace-pre-wrap break-words">
+                        {msg.content}
                       </div>
-                    )}
-                  </div>
+                      {msg.hasImage && (
+                        <div className="mt-2 text-xs opacity-75">
+                          📷 Imagen adjunta
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </motion.div>
               ))}
               
