@@ -5,6 +5,7 @@ import { FaExternalLinkAlt, FaTag, FaShoppingBag } from 'react-icons/fa';
 
 const ProductRecommendationCard = ({ product, index }) => {
   const [imageError, setImageError] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
   // Calcular precio con descuento si existe
   const finalPrice = product.offer > 0 
@@ -16,8 +17,47 @@ const ProductRecommendationCard = ({ product, index }) => {
   // Construir URL del producto
   const productUrl = `/producto/${product.sku}`;
   
-  // URL de imagen placeholder si no hay imagen o falla
-  const placeholderImage = 'https://via.placeholder.com/300x400/f472b6/ffffff?text=Malim';
+  // Obtener todas las imágenes disponibles como fallback
+  const getImageSources = () => {
+    const images = [];
+    
+    // Primero: imagen principal del producto
+    if (product.image && product.image !== '/logo.png') {
+      images.push(product.image);
+    }
+    
+    // Segundo: imágenes de todas las variantes
+    if (product.variants && Array.isArray(product.variants)) {
+      product.variants.forEach(variant => {
+        if (variant.imageUrls && Array.isArray(variant.imageUrls)) {
+          variant.imageUrls.forEach(url => {
+            if (url && !images.includes(url)) {
+              images.push(url);
+            }
+          });
+        }
+      });
+    }
+    
+    // Tercero: logo como último recurso
+    images.push('/logo.png');
+    
+    return images;
+  };
+  
+  const imageSources = getImageSources();
+  const currentImage = imageSources[currentImageIndex] || '/logo.png';
+  
+  // Manejar error de imagen intentando con la siguiente
+  const handleImageError = () => {
+    if (currentImageIndex < imageSources.length - 1) {
+      console.log(`⚠️ Error cargando imagen ${currentImage}, intentando siguiente...`);
+      setCurrentImageIndex(prev => prev + 1);
+    } else {
+      console.log('❌ No hay más imágenes disponibles, usando logo');
+      setImageError(true);
+    }
+  };
   
   return (
     <motion.div
@@ -29,9 +69,10 @@ const ProductRecommendationCard = ({ product, index }) => {
       {/* Imagen del producto */}
       <div className="relative aspect-[3/4] bg-gradient-to-br from-pink-50 to-purple-50 overflow-hidden group">
         <img
-          src={imageError ? placeholderImage : (product.image || placeholderImage)}
+          src={currentImage}
           alt={product.name}
-          onError={() => setImageError(true)}
+          onError={handleImageError}
+          loading="lazy"
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
         

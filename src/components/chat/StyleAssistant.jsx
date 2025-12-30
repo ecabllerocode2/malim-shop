@@ -1,24 +1,24 @@
-// Asistente de estilo Mia - Componente principal
+// Asistente de estilo Mia - Sistema Híbrido LLM + Algoritmo
+// Backend: LLM para conversación + Algoritmo para selección de productos
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FaTimes, 
   FaPaperPlane, 
   FaImage, 
-  FaSpinner,
-  FaUser
+  FaSpinner
 } from 'react-icons/fa';
 import { useAuth } from '../../contexts/AuthContext';
 import UserAuth from '../auth/UserAuth';
 import UserDataForm from '../auth/UserDataForm';
 import MessageWithProducts from './MessageWithProducts';
-import Button from '../ui/Button';
 import { BACKEND_API_URL } from '../../credenciales';
 import { saveUserData, getUserData } from '../../services/authService';
 
 // URL del endpoint
 const API_ENDPOINT = `${BACKEND_API_URL}/api/asesor-estilo`;
 
+/* eslint-disable react/prop-types */
 const StyleAssistant = ({ isOpen, onClose }) => {
   const { user, idToken, updateUser, refreshToken } = useAuth();
   const [messages, setMessages] = useState([]);
@@ -28,8 +28,8 @@ const StyleAssistant = ({ isOpen, onClose }) => {
   const [showUserDataForm, setShowUserDataForm] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
-  const [userMessageCount, setUserMessageCount] = useState(0);
   const [userData, setUserData] = useState(null);
+  const [pendingMessage, setPendingMessage] = useState(null);
   
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -44,10 +44,11 @@ const StyleAssistant = ({ isOpen, onClose }) => {
     if (isOpen && messages.length === 0) {
       setMessages([{
         role: 'assistant',
-        content: '¡Hola! 💝 Soy Mia, tu asesora de estilo personal de Malim. Estoy aquí para ayudarte a encontrar el outfit perfecto. ¿En qué puedo ayudarte hoy?',
+        content: '¡Hola! 💝 Soy Mia, tu asesora de estilo personal de Malim. Estoy aquí para ayudarte a encontrar el outfit perfecto. ¿Para qué ocasión buscas ropa hoy?',
         timestamp: new Date()
       }]);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   // Limpiar al cerrar
@@ -57,7 +58,7 @@ const StyleAssistant = ({ isOpen, onClose }) => {
       setShowUserDataForm(false);
       setSelectedImage(null);
       setImagePreview(null);
-      setUserMessageCount(0);
+      setPendingMessage(null);
     }
   }, [isOpen]);
 
@@ -72,10 +73,12 @@ const StyleAssistant = ({ isOpen, onClose }) => {
       }
     };
     loadUserData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   /**
    * Enviar mensaje al backend
+   * Sistema híbrido: LLM conversa + Algoritmo selecciona productos
    */
   const sendMessage = async (messageText, imageBase64 = null) => {
     if (!messageText.trim() && !imageBase64) return;
@@ -95,38 +98,22 @@ const StyleAssistant = ({ isOpen, onClose }) => {
     setImagePreview(null);
     setLoading(true);
 
-    // Incrementar contador de mensajes del usuario
-    const currentMessageCount = userMessageCount + 1;
-    setUserMessageCount(currentMessageCount);
-
     try {
       const requestBody = {
         mensaje: messageText.trim() || 'Analiza esta imagen',
-        imagen: imageBase64,
-        idToken: null,
-        userData: null
+        imagen: imageBase64 || undefined
       };
 
-      // Enviar idToken solo desde el segundo mensaje en adelante y si el usuario está autenticado
-      if (currentMessageCount >= 2 && idToken) {
+      // Enviar idToken si el usuario está autenticado
+      // El backend obtiene userData automáticamente de Firestore con el idToken
+      if (idToken) {
         requestBody.idToken = idToken;
-        
-        // Enviar userData si existe para que el backend lo guarde
-        if (user && userData) {
-          requestBody.userData = {
-            nombre: userData.nombre,
-            whatsapp: userData.whatsapp,
-            email: user.email
-          };
-        }
       }
 
       console.log('🚀 Enviando mensaje al endpoint:', API_ENDPOINT);
-      console.log('📊 Mensaje #:', currentMessageCount);
-      console.log('🔐 Envía token:', !!requestBody.idToken);
-      console.log('👤 Envía userData:', !!requestBody.userData);
-      console.log('📦 Body:', { ...requestBody, imagen: imageBase64 ? '(imagen presente)' : null, userData: requestBody.userData ? '(presente)' : null });
-      console.log('🌐 Origin actual:', window.location.origin);
+      console.log('🔐 Usuario autenticado:', !!idToken);
+      console.log('📷 Tiene imagen:', !!imageBase64);
+      console.log('💬 Mensaje:', messageContent.substring(0, 50) + '...');
 
       const response = await fetch(API_ENDPOINT, {
         method: 'POST',
@@ -150,7 +137,7 @@ const StyleAssistant = ({ isOpen, onClose }) => {
 
       if (!data.success) {
         // Si el token expiró, intentar refrescar
-        if (data.error && data.error.includes('Token')) {
+        if (data.error && data.error.includes('Token') && refreshToken) {
           console.log('🔄 Token expirado, refrescando...');
           const newToken = await refreshToken();
           if (newToken) {
@@ -161,14 +148,20 @@ const StyleAssistant = ({ isOpen, onClose }) => {
         throw new Error(data.error || 'Error al procesar el mensaje');
       }
 
-      // Caso 1: Requiere autenticación
-      if (data.requiresAuth) {
+      // Caso 1: Requiere autenticación (mode: 'auth_required')
+      if (data.requiresAuth || data.mode === 'auth_required') {
+        // Guardar mensaje pendiente para reenviar después del login
+        setPendingMessage({ text: messageText, image: imageBase64 });
+        
+        // Mostrar mensaje del backend pidiendo autenticación
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: data.message,
+          content: data.message || data.response || '¡Perfecto! 💝 Para mostrarte nuestros productos necesito que inicies sesión. Es rápido y seguro.',
           requiresAuth: true,
+          mode: data.mode,
           timestamp: new Date()
         }]);
+        
         setShowAuth(true);
         return;
       }
@@ -178,6 +171,7 @@ const StyleAssistant = ({ isOpen, onClose }) => {
         role: 'assistant',
         content: data.response,
         mode: data.mode,
+        isAuthenticated: data.isAuthenticated,
         timestamp: new Date()
       }]);
 
@@ -234,7 +228,7 @@ const StyleAssistant = ({ isOpen, onClose }) => {
   /**
    * Manejar éxito de autenticación
    */
-  const handleAuthSuccess = async (newUser, newToken, isNewUser) => {
+  const handleAuthSuccess = async (newUser, newToken) => {
     updateUser(newUser, newToken);
     setShowAuth(false);
     
@@ -244,8 +238,13 @@ const StyleAssistant = ({ isOpen, onClose }) => {
       setShowUserDataForm(true);
     } else {
       setUserData(result.data);
-      // Reenviar el último mensaje del usuario ahora con autenticación
-      resendLastUserMessage();
+      // Reenviar mensaje pendiente con autenticación
+      if (pendingMessage) {
+        setTimeout(() => {
+          sendMessage(pendingMessage.text, pendingMessage.image);
+          setPendingMessage(null);
+        }, 500);
+      }
     }
   };
 
@@ -262,25 +261,15 @@ const StyleAssistant = ({ isOpen, onClose }) => {
       setUserData(data);
       setShowUserDataForm(false);
       
-      // Reenviar el último mensaje del usuario ahora con datos completos
-      resendLastUserMessage();
+      // Reenviar mensaje pendiente ahora con datos completos
+      if (pendingMessage) {
+        setTimeout(() => {
+          sendMessage(pendingMessage.text, pendingMessage.image);
+          setPendingMessage(null);
+        }, 500);
+      }
     } else {
       throw new Error('Error al guardar datos');
-    }
-  };
-
-  /**
-   * Reenviar el último mensaje del usuario
-   */
-  const resendLastUserMessage = () => {
-    const lastUserMessage = messages
-      .filter(m => m.role === 'user')
-      .pop();
-    
-    if (lastUserMessage) {
-      setTimeout(() => {
-        sendMessage(lastUserMessage.content);
-      }, 500);
     }
   };
 

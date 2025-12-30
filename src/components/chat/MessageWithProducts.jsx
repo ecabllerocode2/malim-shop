@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import ProductRecommendationCard from './ProductRecommendationCard';
 import { db } from '../../credenciales';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { getMainImage } from '../../utils/format';
 
 const MessageWithProducts = ({ content, mode }) => {
   const [products, setProducts] = useState([]);
@@ -73,17 +74,19 @@ const MessageWithProducts = ({ content, mode }) => {
             
             // Solo agregar si está publicado online
             if (data.publishOnline === true) {
+              const mainImage = getMainImage(data);
               fetchedProducts.push({
                 sku: docSnap.id,
                 name: data.name,
                 price: data.publicPrice,
                 offer: data.offerPercentage || 0,
                 category: data.category,
-                image: data.mainImage || data.variants?.[0]?.images?.[0] || null,
+                image: mainImage || '/logo.png',
                 colors: data.variants?.map(v => v.colorName).filter(Boolean) || [],
-                description: data.shortDetails || ''
+                description: data.shortDetails || '',
+                variants: data.variants || []
               });
-              console.log(`✅ Producto encontrado: ${data.name} (${sku})`);
+              console.log(`✅ Producto encontrado: ${data.name} (${sku}), imagen:`, mainImage);
             } else {
               console.log(`⚠️ Producto ${sku} no está publicado online`);
             }
@@ -105,62 +108,113 @@ const MessageWithProducts = ({ content, mode }) => {
   };
 
   /**
-   * Formatear mensaje para mostrar enlaces clickeables
+   * Convertir markdown básico a HTML (negritas)
    */
-  const formatMessage = (text) => {
-    const urlRegex = /(https?:\/\/[^\s]+)/g;
-    const parts = text.split(urlRegex);
-    
-    return parts.map((part, index) => {
-      if (urlRegex.test(part)) {
-        // No mostrar el enlace si ya tenemos cards de productos
-        if (products.length > 0 && part.includes('/producto/')) {
-          return null;
-        }
-        return (
-          <a
-            key={index}
-            href={part}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-pink-600 underline hover:text-pink-700 font-medium"
-          >
-            Ver producto
-          </a>
-        );
-      }
-      return <span key={index}>{part}</span>;
-    });
+  const convertMarkdown = (text) => {
+    // Convertir **texto** a <strong>texto</strong>
+    return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
   };
 
-  // Limpiar el mensaje de URLs si hay productos
-  const cleanMessage = products.length > 0
-    ? content.replace(/https?:\/\/[^\s]+/g, '').trim()
-    : content;
+  /**
+   * Renderizar contenido con productos inline
+   */
+  const renderContentWithProducts = () => {
+    console.log('🎨 Renderizando:', { mode, productsCount: products.length });
+    
+    if (mode !== 'recommendation' || products.length === 0) {
+      // Sin productos: solo texto con markdown
+      return (
+        <div
+          className="text-sm sm:text-base whitespace-pre-wrap break-words"
+          dangerouslySetInnerHTML={{ __html: convertMarkdown(content) }}
+        />
+      );
+    }
+
+    // Con productos: dividir y renderizar inline
+    const elements = [];
+    let remainingContent = content;
+    
+    // Para cada producto, encontrar su posición y dividir el texto
+    products.forEach((product, idx) => {
+      // Buscar SKU o URL en el contenido
+      const skuRegex = new RegExp(`SKU:\\s*${product.sku}`, 'i');
+      const urlRegex = new RegExp(`https?://[^\\s]*/producto/${product.sku}`, 'i');
+      
+      let splitIndex = -1;
+      let matchText = '';
+      
+      // Buscar por SKU
+      const skuMatch = remainingContent.match(skuRegex);
+      if (skuMatch) {
+        splitIndex = skuMatch.index + skuMatch[0].length;
+        matchText = skuMatch[0];
+      } else {
+        // Buscar por URL
+        const urlMatch = remainingContent.match(urlRegex);
+        if (urlMatch) {
+          splitIndex = urlMatch.index + urlMatch[0].length;
+          matchText = urlMatch[0];
+        }
+      }
+      
+      if (splitIndex !== -1) {
+        // Texto antes del producto (incluye la mención)
+        const textBefore = remainingContent.substring(0, splitIndex);
+        // Limpiar URLs del texto
+        const cleanText = textBefore.replace(/https?:\/\/[^\s]+/g, '').trim();
+        
+        // Agregar texto
+        if (cleanText) {
+          elements.push(
+            <div
+              key={`text-${idx}`}
+              className="text-sm sm:text-base whitespace-pre-wrap break-words"
+              dangerouslySetInnerHTML={{ __html: convertMarkdown(cleanText) }}
+            />
+          );
+        }
+        
+        // Agregar tarjeta del producto
+        elements.push(
+          <motion.div
+            key={`product-${product.sku}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: idx * 0.1 }}
+            className="my-4"
+          >
+            <ProductRecommendationCard
+              product={product}
+              index={idx}
+            />
+          </motion.div>
+        );
+        
+        // Actualizar contenido restante
+        remainingContent = remainingContent.substring(splitIndex);
+      }
+    });
+    
+    // Agregar texto final si queda algo
+    const finalText = remainingContent.replace(/https?:\/\/[^\s]+/g, '').trim();
+    if (finalText) {
+      elements.push(
+        <div
+          key="text-final"
+          className="text-sm sm:text-base whitespace-pre-wrap break-words"
+          dangerouslySetInnerHTML={{ __html: convertMarkdown(finalText) }}
+        />
+      );
+    }
+    
+    console.log('✅ Elementos generados:', elements.length);
+    return elements;
+  };
 
   return (
     <div className="space-y-3">
-      {/* Texto del mensaje */}
-      <div className="text-sm sm:text-base whitespace-pre-wrap break-words">
-        {formatMessage(cleanMessage)}
-      </div>
-
-      {/* Grid de productos recomendados */}
-      {products.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-4 pt-4 border-t-2 border-pink-100"
-        >
-          {products.map((product, index) => (
-            <ProductRecommendationCard
-              key={product.sku}
-              product={product}
-              index={index}
-            />
-          ))}
-        </motion.div>
-      )}
+      {renderContentWithProducts()}
 
       {/* Loading de productos */}
       {loading && (
