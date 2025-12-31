@@ -5,10 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   FaTimes, 
   FaPaperPlane, 
-  FaImage, 
   FaSpinner,
   FaSignOutAlt,
-  FaUser
+  FaUser,
+  FaRedo
 } from 'react-icons/fa';
 import { useAuth } from '../../contexts/AuthContext';
 import UserAuth from '../auth/UserAuth';
@@ -34,8 +34,19 @@ const StyleAssistant = ({ isOpen, onClose }) => {
   const [pendingMessage, setPendingMessage] = useState(null);
   const [showAccountMenu, setShowAccountMenu] = useState(false);
   
+  // Conversación actual: restaurar de localStorage si existe
+  const [currentConversation, setCurrentConversation] = useState(() => {
+    const saved = localStorage.getItem('mia_current_conversation');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  // 🆕 NUEVO: Estado para modo y datos extraídos
+  const [currentMode, setCurrentMode] = useState('discovery');
+  const [datosExtraidos, setDatosExtraidos] = useState({});
+  const [datosFaltantes, setDatosFaltantes] = useState([]);
+  
   const messagesEndRef = useRef(null);
-  const fileInputRef = useRef(null);
+  // const fileInputRef = useRef(null); // Eliminado: ya no se usa carga de imágenes
 
   // Auto-scroll al último mensaje
   useEffect(() => {
@@ -53,6 +64,30 @@ const StyleAssistant = ({ isOpen, onClose }) => {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
+
+  // Persistir conversación en localStorage
+  useEffect(() => {
+    localStorage.setItem('mia_current_conversation', JSON.stringify(currentConversation));
+  }, [currentConversation]);
+
+  // Ya no limpiar conversación al montar: solo limpiar al logout o nueva conversación
+
+  // Restaurar mensaje pendiente del localStorage al cargar
+  useEffect(() => {
+    if (isOpen && !pendingMessage) {
+      const savedPendingMessage = localStorage.getItem('mia_pending_message');
+      if (savedPendingMessage) {
+        try {
+          const parsed = JSON.parse(savedPendingMessage);
+          setPendingMessage(parsed);
+          console.log('📦 Mensaje pendiente restaurado del localStorage');
+        } catch (e) {
+          console.error('Error al parsear mensaje pendiente:', e);
+          localStorage.removeItem('mia_pending_message');
+        }
+      }
+    }
+  }, [isOpen, pendingMessage]);
 
   // Limpiar al cerrar
   useEffect(() => {
@@ -91,6 +126,16 @@ const StyleAssistant = ({ isOpen, onClose }) => {
       setShowAuth(false);
       setShowUserDataForm(false);
       setPendingMessage(null);
+      
+      // 🆕 NUEVO: Limpiar conversación actual y todos los flags
+      setCurrentConversation([]);
+      localStorage.removeItem('mia_current_conversation');
+      localStorage.removeItem('mia_pending_message');
+      setPendingMessage(null);
+      setCurrentMode('discovery');
+      setDatosExtraidos({});
+      setDatosFaltantes([]);
+      
       // Limpiar mensajes y reiniciar conversación
       setMessages([{
         role: 'assistant',
@@ -109,6 +154,33 @@ const StyleAssistant = ({ isOpen, onClose }) => {
   const handleOpenAuth = () => {
     setShowAccountMenu(false);
     setShowAuth(true);
+  };
+
+  /**
+   * 🆕 NUEVO: Iniciar nueva conversación y limpiar TODOS los flags
+   */
+  const handleNewConversation = () => {
+    const confirmar = window.confirm('¿Iniciar una nueva búsqueda? Se perderá la conversación actual.');
+    
+    if (confirmar) {
+      // Limpiar todo el estado de conversación
+      setCurrentConversation([]);
+      localStorage.removeItem('mia_current_conversation');
+      localStorage.removeItem('mia_pending_message');
+      setPendingMessage(null);
+      setCurrentMode('discovery');
+      setDatosExtraidos({});
+      setDatosFaltantes([]);
+      
+      console.log('🔄 Nueva conversación iniciada. Todos los flags limpiados.');
+      
+      // Reiniciar mensajes con mensaje de bienvenida
+      setMessages([{
+        role: 'assistant',
+        content: '¡Hola! 💝 Soy Mia, tu asesora de estilo personal de Malim. Estoy aquí para ayudarte a encontrar el outfit perfecto. ¿Para qué ocasión buscas ropa hoy?',
+        timestamp: new Date()
+      }]);
+    }
   };
 
   /**
@@ -136,7 +208,9 @@ const StyleAssistant = ({ isOpen, onClose }) => {
     try {
       const requestBody = {
         mensaje: messageText.trim() || 'Analiza esta imagen',
-        imagen: imageBase64 || undefined
+        imagen: imageBase64 || undefined,
+        // 🆕 NUEVO: Enviar conversación actual al backend
+        currentConversation: currentConversation
       };
 
       // Enviar idToken y userData si el usuario está autenticado
@@ -152,11 +226,15 @@ const StyleAssistant = ({ isOpen, onClose }) => {
         }
       }
 
-      console.log('🚀 Enviando mensaje al endpoint:', API_ENDPOINT);
-      console.log('🔐 Usuario autenticado:', !!idToken);
-      console.log('👤 Datos usuario:', userData ? 'Sí' : 'No');
-      console.log('📷 Tiene imagen:', !!imageBase64);
-      console.log('💬 Mensaje:', messageContent.substring(0, 50) + '...');
+      // 🆕 NUEVO: Logs detallados para debugging
+      console.log('📤 Enviando a Mia:', {
+        endpoint: API_ENDPOINT,
+        mensajeLength: messageText.length,
+        tieneImagen: !!imageBase64,
+        conversacionActual: currentConversation.length,
+        autenticado: !!idToken,
+        userData: userData ? 'Sí' : 'No'
+      });
 
       const response = await fetch(API_ENDPOINT, {
         method: 'POST',
@@ -176,7 +254,16 @@ const StyleAssistant = ({ isOpen, onClose }) => {
       }
 
       const data = await response.json();
-      console.log('✅ Data recibida:', data);
+      
+      // 🆕 NUEVO: Logs detallados de respuesta
+      console.log('📥 Respuesta de Mia:', {
+        success: data.success,
+        modo: data.mode,
+        datosCompletos: data.datosCompletos,
+        datosFaltantes: data.datosFaltantes,
+        datosExtraidos: data.datosExtraidos,
+        requiresAuth: data.requiresAuth || data.mode === 'auth_required'
+      });
 
       if (!data.success) {
         // Si el token expiró, intentar refrescar
@@ -192,9 +279,17 @@ const StyleAssistant = ({ isOpen, onClose }) => {
       }
 
       // Caso 1: Requiere autenticación (mode: 'auth_required')
-      if (data.requiresAuth || data.mode === 'auth_required') {
-        // Guardar mensaje pendiente para reenviar después del login
-        setPendingMessage({ text: messageText, image: imageBase64 });
+      // ⚠️ EVITAR DOBLE LOGIN: Solo mostrar modal si no se ha pedido antes
+      if ((data.requiresAuth || data.mode === 'auth_required') && !sessionStorage.getItem('mia_auth_requested')) {
+        // Marcar que ya se pidió autenticación para esta conversación
+        sessionStorage.setItem('mia_auth_requested', 'true');
+        
+        // ⚠️ CRÍTICO: Guardar mensaje pendiente en localStorage para reenviar después del login
+        const pendingData = { text: messageText, image: imageBase64 };
+        setPendingMessage(pendingData);
+        localStorage.setItem('mia_pending_message', JSON.stringify(pendingData));
+        
+        console.log('⚠️ Autenticación requerida (primera vez). Mensaje guardado:', messageText.substring(0, 50));
         
         // Mostrar mensaje del backend pidiendo autenticación
         setMessages(prev => [...prev, {
@@ -215,8 +310,33 @@ const StyleAssistant = ({ isOpen, onClose }) => {
         content: data.respuesta,
         mode: data.mode,
         isAuthenticated: data.isAuthenticated,
+        datosExtraidos: data.datosExtraidos,
+        datosCompletos: data.datosCompletos,
+        datosFaltantes: data.datosFaltantes,
         timestamp: new Date()
       }]);
+      
+      // 🆕 NUEVO: Actualizar conversación actual
+      const newConversation = [
+        ...currentConversation,
+        messageText.trim() || 'Analiza esta imagen',  // Mensaje del usuario
+        data.respuesta                                  // Respuesta de Mia
+      ];
+      setCurrentConversation(newConversation);
+      
+      // 🆕 NUEVO: Actualizar estado de modo y datos
+      if (data.mode) {
+        setCurrentMode(data.mode);
+      }
+      if (data.datosExtraidos) {
+        setDatosExtraidos(data.datosExtraidos);
+      }
+      if (data.datosFaltantes) {
+        setDatosFaltantes(data.datosFaltantes);
+      }
+      
+      // Limpiar mensaje pendiente después de respuesta exitosa
+      localStorage.removeItem('mia_pending_message');
 
     } catch (error) {
       console.error('❌ Error completo:', error);
@@ -244,36 +364,18 @@ const StyleAssistant = ({ isOpen, onClose }) => {
   /**
    * Manejar selección de imagen
    */
-  const handleImageSelect = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
 
-    // Validar tamaño (máximo 4MB)
-    if (file.size > 4 * 1024 * 1024) {
-      alert('La imagen es muy pesada. Máximo 4MB.');
-      return;
-    }
-
-    // Validar tipo
-    if (!file.type.startsWith('image/')) {
-      alert('Por favor selecciona una imagen válida.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      setSelectedImage(event.target.result);
-      setImagePreview(URL.createObjectURL(file));
-    };
-    reader.readAsDataURL(file);
-  };
 
   /**
-   * Manejar éxito de autenticación
+   * ⚠️ CRÍTICO: Manejar éxito de autenticación y reenviar mensaje UNA SOLA VEZ con conversación completa
    */
   const handleAuthSuccess = async (newUser, newToken) => {
+    console.log('✅ Login exitoso. Token recibido.');
     updateUser(newUser, newToken);
     setShowAuth(false);
+    
+    // Limpiar flag de auth antes de reenviar para evitar bloqueos
+    sessionStorage.removeItem('mia_auth_requested');
     
     // Si es nuevo usuario o no tiene datos completos, mostrar formulario
     const result = await getUserData(newUser.uid);
@@ -281,12 +383,27 @@ const StyleAssistant = ({ isOpen, onClose }) => {
       setShowUserDataForm(true);
     } else {
       setUserData(result.data);
-      // Reenviar mensaje pendiente con autenticación
-      if (pendingMessage) {
+      
+      // ⚠️ CRÍTICO: Reenviar mensaje pendiente UNA SOLA VEZ con token y conversación completa
+      const savedPendingMessage = localStorage.getItem('mia_pending_message');
+      const messageToResend = pendingMessage || (savedPendingMessage ? JSON.parse(savedPendingMessage) : null);
+      
+      if (messageToResend && messageToResend.text) {
+        console.log('🔄 Reenviando mensaje UNA VEZ con autenticación:', {
+          mensaje: messageToResend.text.substring(0, 50),
+          conversacionActual: currentConversation.length,
+          tieneImagen: !!messageToResend.image
+        });
+        
+        // Limpiar inmediatamente para evitar reenvíos duplicados
+        setPendingMessage(null);
+        localStorage.removeItem('mia_pending_message');
+        
         setTimeout(() => {
-          sendMessage(pendingMessage.text, pendingMessage.image);
-          setPendingMessage(null);
+          sendMessage(messageToResend.text, messageToResend.image);
         }, 500);
+      } else {
+        console.warn('⚠️ No hay mensaje pendiente para reenviar después del login');
       }
     }
   };
@@ -304,11 +421,22 @@ const StyleAssistant = ({ isOpen, onClose }) => {
       setUserData(data);
       setShowUserDataForm(false);
       
-      // Reenviar mensaje pendiente ahora con datos completos
-      if (pendingMessage) {
+      // Limpiar flag de auth
+      sessionStorage.removeItem('mia_auth_requested');
+      
+      // ⚠️ CRÍTICO: Reenviar mensaje pendiente UNA SOLA VEZ con datos completos
+      const savedPendingMessage = localStorage.getItem('mia_pending_message');
+      const messageToResend = pendingMessage || (savedPendingMessage ? JSON.parse(savedPendingMessage) : null);
+      
+      if (messageToResend && messageToResend.text) {
+        console.log('🔄 Reenviando mensaje UNA VEZ después de completar datos del usuario');
+        
+        // Limpiar inmediatamente para evitar reenvíos duplicados
+        setPendingMessage(null);
+        localStorage.removeItem('mia_pending_message');
+        
         setTimeout(() => {
-          sendMessage(pendingMessage.text, pendingMessage.image);
-          setPendingMessage(null);
+          sendMessage(messageToResend.text, messageToResend.image);
         }, 500);
       }
     } else {
@@ -351,6 +479,17 @@ const StyleAssistant = ({ isOpen, onClose }) => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {/* Botón Nueva Conversación */}
+              {currentConversation.length > 0 && (
+                <button
+                  onClick={handleNewConversation}
+                  className="text-white/90 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/10"
+                  title="Nueva búsqueda"
+                >
+                  <FaRedo className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+              )}
+              
               {/* Botón de cuenta/logout */}
               <div className="relative">
                 <button
@@ -414,6 +553,42 @@ const StyleAssistant = ({ isOpen, onClose }) => {
             </div>
           </div>
 
+          {/* Indicador de Progreso - Mostrar en modo discovery cuando hay datos faltantes */}
+          {currentMode === 'discovery' && datosFaltantes.length > 0 && (
+            <div className="bg-gradient-to-r from-pink-50 to-purple-50 border-b border-pink-100 px-4 py-3">
+              <div className="flex flex-wrap gap-2">
+                {/* Datos extraídos */}
+                {datosExtraidos.prendas && datosExtraidos.prendas.length > 0 && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                    ✅ {datosExtraidos.prendas[0]}
+                  </span>
+                )}
+                {datosExtraidos.tallas && datosExtraidos.tallas.length > 0 && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                    ✅ Talla: {datosExtraidos.tallas.join(', ')}
+                  </span>
+                )}
+                {datosExtraidos.colores && datosExtraidos.colores.length > 0 && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                    ✅ Color: {datosExtraidos.colores.join(', ')}
+                  </span>
+                )}
+                
+                {/* Datos faltantes */}
+                {datosFaltantes.includes('categoria') && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                    ⏳ Prenda
+                  </span>
+                )}
+                {datosFaltantes.includes('talla') && (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                    ⏳ Talla
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Chat Area */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-gradient-to-b from-gray-50 to-white">
             <div className="space-y-4">
@@ -428,7 +603,7 @@ const StyleAssistant = ({ isOpen, onClose }) => {
                   {msg.role === 'assistant' ? (
                     // Mensaje del asistente con detección de productos
                     <div className="max-w-[95%] sm:max-w-[85%] bg-white border-2 border-pink-200 text-gray-800 rounded-2xl px-4 py-3">
-                      <MessageWithProducts content={msg.content} mode={msg.mode} />
+                      <MessageWithProducts content={msg.content} mode={msg.mode} onProductClick={onClose} />
                     </div>
                   ) : (
                     // Mensaje del usuario o sistema
@@ -539,22 +714,7 @@ const StyleAssistant = ({ isOpen, onClose }) => {
 
               {/* Input Form */}
               <form onSubmit={handleSubmit} className="flex items-end gap-2">
-                {/* Image Button */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={loading}
-                  className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-xl flex items-center justify-center hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <FaImage className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageSelect}
-                  className="hidden"
-                />
+
 
                 {/* Text Input */}
                 <div className="flex-1 relative">

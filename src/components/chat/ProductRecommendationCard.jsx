@@ -2,8 +2,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FaExternalLinkAlt, FaTag, FaShoppingBag } from 'react-icons/fa';
+import { Link } from 'react-router-dom';
 
-const ProductRecommendationCard = ({ product, index }) => {
+const ProductRecommendationCard = ({ product, index, onProductClick }) => {
   const [imageError, setImageError] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
@@ -64,16 +65,18 @@ const ProductRecommendationCard = ({ product, index }) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      className="bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border-2 border-pink-100 hover:border-pink-300"
+      className="bg-white rounded-lg overflow-hidden shadow hover:shadow-lg transition-all duration-300 border border-pink-100 hover:border-pink-300 max-w-[150px] min-w-[140px] w-full flex flex-col"
+      style={{ fontSize: '0.92rem' }}
     >
       {/* Imagen del producto */}
-      <div className="relative aspect-[3/4] bg-gradient-to-br from-pink-50 to-purple-50 overflow-hidden group">
+      <div className="relative aspect-[3/4] bg-gradient-to-br from-pink-50 to-purple-50 overflow-hidden group" style={{ minHeight: 120, maxHeight: 160 }}>
         <img
           src={currentImage}
           alt={product.name}
           onError={handleImageError}
           loading="lazy"
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          style={{ minHeight: 120, maxHeight: 160 }}
         />
         
         {/* Badge de descuento */}
@@ -93,61 +96,58 @@ const ProductRecommendationCard = ({ product, index }) => {
       </div>
       
       {/* Información del producto */}
-      <div className="p-4">
+      <div className="p-2 flex-1 flex flex-col justify-between">
         {/* Nombre */}
-        <h3 className="font-bold text-gray-900 text-sm mb-2 line-clamp-2 min-h-[2.5rem]">
+        <h3 className="font-bold text-gray-900 text-xs mb-1 line-clamp-2 min-h-[2rem]">
           {product.name}
         </h3>
-        
         {/* Precio */}
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-1 mb-1">
           {hasDiscount ? (
             <>
-              <span className="text-lg font-bold text-pink-600">
+              <span className="text-base font-bold text-pink-600">
                 ${finalPrice}
               </span>
-              <span className="text-sm text-gray-400 line-through">
+              <span className="text-xs text-gray-400 line-through">
                 ${product.price.toFixed(2)}
               </span>
             </>
           ) : (
-            <span className="text-lg font-bold text-gray-900">
+            <span className="text-base font-bold text-gray-900">
               ${finalPrice}
             </span>
           )}
         </div>
-        
         {/* Colores disponibles (si hay) */}
         {product.colors && product.colors.length > 0 && (
-          <div className="mb-3">
-            <p className="text-xs text-gray-500 mb-1">Colores:</p>
+          <div className="mb-1">
             <div className="flex gap-1 flex-wrap">
-              {product.colors.slice(0, 4).map((color, idx) => (
+              {product.colors.slice(0, 2).map((color, idx) => (
                 <span
                   key={idx}
-                  className="px-2 py-0.5 bg-gray-100 text-gray-700 text-xs rounded-full"
+                  className="px-1 py-0.5 bg-gray-100 text-gray-700 text-[10px] rounded-full"
                 >
                   {color}
                 </span>
               ))}
-              {product.colors.length > 4 && (
-                <span className="px-2 py-0.5 bg-gray-100 text-gray-500 text-xs rounded-full">
-                  +{product.colors.length - 4}
+              {product.colors.length > 2 && (
+                <span className="px-1 py-0.5 bg-gray-100 text-gray-500 text-[10px] rounded-full">
+                  +{product.colors.length - 2}
                 </span>
               )}
             </div>
           </div>
         )}
-        
         {/* Botón de ver producto */}
-        <a
-          href={productUrl}
-          className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-2.5 px-4 rounded-lg font-semibold text-sm flex items-center justify-center gap-2 hover:from-pink-600 hover:to-purple-700 transition-all duration-300 shadow-md hover:shadow-lg"
+        <Link
+          to={productUrl}
+          className="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white py-1.5 px-2 rounded-md font-semibold text-xs flex items-center justify-center gap-1 hover:from-pink-600 hover:to-purple-700 transition-all duration-300 shadow hover:shadow-md mt-1"
+          onClick={onProductClick}
         >
-          <FaShoppingBag className="w-4 h-4" />
-          Ver Producto
+          <FaShoppingBag className="w-3 h-3" />
+          Ver
           <FaExternalLinkAlt className="w-3 h-3" />
-        </a>
+        </Link>
       </div>
     </motion.div>
   );
