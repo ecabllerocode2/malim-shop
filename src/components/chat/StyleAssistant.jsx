@@ -6,7 +6,9 @@ import {
   FaTimes, 
   FaPaperPlane, 
   FaImage, 
-  FaSpinner
+  FaSpinner,
+  FaSignOutAlt,
+  FaUser
 } from 'react-icons/fa';
 import { useAuth } from '../../contexts/AuthContext';
 import UserAuth from '../auth/UserAuth';
@@ -20,7 +22,7 @@ const API_ENDPOINT = `${BACKEND_API_URL}/api/asesor-estilo`;
 
 /* eslint-disable react/prop-types */
 const StyleAssistant = ({ isOpen, onClose }) => {
-  const { user, idToken, updateUser, refreshToken } = useAuth();
+  const { user, idToken, updateUser, refreshToken, logout } = useAuth();
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [loading, setLoading] = useState(false);
@@ -30,6 +32,7 @@ const StyleAssistant = ({ isOpen, onClose }) => {
   const [imagePreview, setImagePreview] = useState(null);
   const [userData, setUserData] = useState(null);
   const [pendingMessage, setPendingMessage] = useState(null);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
   
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -59,6 +62,7 @@ const StyleAssistant = ({ isOpen, onClose }) => {
       setSelectedImage(null);
       setImagePreview(null);
       setPendingMessage(null);
+      setShowAccountMenu(false);
     }
   }, [isOpen]);
 
@@ -75,6 +79,37 @@ const StyleAssistant = ({ isOpen, onClose }) => {
     loadUserData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  /**
+   * Manejar cierre de sesión
+   */
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setUserData(null);
+      setShowAccountMenu(false);
+      setShowAuth(false);
+      setShowUserDataForm(false);
+      setPendingMessage(null);
+      // Limpiar mensajes y reiniciar conversación
+      setMessages([{
+        role: 'assistant',
+        content: '¡Hola! 💝 Soy Mia, tu asesora de estilo personal de Malim. Estoy aquí para ayudarte a encontrar el outfit perfecto. ¿Para qué ocasión buscas ropa hoy?',
+        timestamp: new Date()
+      }]);
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+      alert('Error al cerrar sesión. Por favor intenta de nuevo.');
+    }
+  };
+
+  /**
+   * Manejar apertura del panel de autenticación
+   */
+  const handleOpenAuth = () => {
+    setShowAccountMenu(false);
+    setShowAuth(true);
+  };
 
   /**
    * Enviar mensaje al backend
@@ -104,14 +139,22 @@ const StyleAssistant = ({ isOpen, onClose }) => {
         imagen: imageBase64 || undefined
       };
 
-      // Enviar idToken si el usuario está autenticado
-      // El backend obtiene userData automáticamente de Firestore con el idToken
+      // Enviar idToken y userData si el usuario está autenticado
       if (idToken) {
         requestBody.idToken = idToken;
+        // Incluir userData para que el backend lo guarde/actualice
+        if (userData) {
+          requestBody.userData = {
+            nombre: userData.nombre,
+            whatsapp: userData.whatsapp,
+            email: user?.email || userData.email
+          };
+        }
       }
 
       console.log('🚀 Enviando mensaje al endpoint:', API_ENDPOINT);
       console.log('🔐 Usuario autenticado:', !!idToken);
+      console.log('👤 Datos usuario:', userData ? 'Sí' : 'No');
       console.log('📷 Tiene imagen:', !!imageBase64);
       console.log('💬 Mensaje:', messageContent.substring(0, 50) + '...');
 
@@ -156,7 +199,7 @@ const StyleAssistant = ({ isOpen, onClose }) => {
         // Mostrar mensaje del backend pidiendo autenticación
         setMessages(prev => [...prev, {
           role: 'assistant',
-          content: data.message || data.response || '¡Perfecto! 💝 Para mostrarte nuestros productos necesito que inicies sesión. Es rápido y seguro.',
+          content: data.message || data.respuesta || '¡Perfecto! 💝 Para mostrarte nuestros productos necesito que inicies sesión. Es rápido y seguro.',
           requiresAuth: true,
           mode: data.mode,
           timestamp: new Date()
@@ -169,7 +212,7 @@ const StyleAssistant = ({ isOpen, onClose }) => {
       // Caso 2: Respuesta normal (discovery o recommendation)
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: data.response,
+        content: data.respuesta,
         mode: data.mode,
         isAuthenticated: data.isAuthenticated,
         timestamp: new Date()
@@ -307,12 +350,68 @@ const StyleAssistant = ({ isOpen, onClose }) => {
                 </p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="text-white/90 hover:text-white transition-colors p-2"
-            >
-              <FaTimes className="w-5 h-5 sm:w-6 sm:h-6" />
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Botón de cuenta/logout */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowAccountMenu(!showAccountMenu)}
+                  className="text-white/90 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/10"
+                  title={user ? 'Cuenta' : 'Iniciar sesión'}
+                >
+                  <FaUser className="w-4 h-4 sm:w-5 sm:h-5" />
+                </button>
+                
+                {/* Menú de cuenta */}
+                <AnimatePresence>
+                  {showAccountMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                      className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-2xl overflow-hidden z-50"
+                    >
+                      {user ? (
+                        // Usuario autenticado
+                        <div>
+                          <div className="px-4 py-3 bg-gradient-to-r from-pink-50 to-purple-50 border-b border-pink-100">
+                            <p className="text-xs text-gray-500 mb-1">Conectado como:</p>
+                            <p className="text-sm font-semibold text-gray-800 truncate">
+                              {userData?.nombre || user.displayName || user.email}
+                            </p>
+                            {user.email && (
+                              <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={handleLogout}
+                            className="w-full px-4 py-3 text-left text-sm text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2"
+                          >
+                            <FaSignOutAlt className="w-4 h-4" />
+                            Cerrar sesión
+                          </button>
+                        </div>
+                      ) : (
+                        // Usuario no autenticado
+                        <button
+                          onClick={handleOpenAuth}
+                          className="w-full px-4 py-3 text-left text-sm text-pink-600 hover:bg-pink-50 transition-colors flex items-center gap-2"
+                        >
+                          <FaUser className="w-4 h-4" />
+                          Iniciar sesión
+                        </button>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+              
+              <button
+                onClick={onClose}
+                className="text-white/90 hover:text-white transition-colors p-2"
+              >
+                <FaTimes className="w-5 h-5 sm:w-6 sm:h-6" />
+              </button>
+            </div>
           </div>
 
           {/* Chat Area */}
