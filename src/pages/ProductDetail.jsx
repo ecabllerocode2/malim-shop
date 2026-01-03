@@ -1,9 +1,8 @@
 // Página de detalle de producto con UX premium
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../credenciales';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useProducts } from '../contexts/ProductsContext';
+import { motion } from 'framer-motion';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Thumbs, Zoom } from 'swiper/modules';
 import 'swiper/css';
@@ -35,37 +34,44 @@ const ProductDetail = () => {
   const [thumbsSwiper, setThumbsSwiper] = useState(null);
   const [isFavorite, setIsFavorite] = useState(false);
 
+  const { fetchProductById, getProductById } = useProducts();
+
   useEffect(() => {
-    loadProduct();
-  }, [productId]);
+    const loadProduct = async () => {
+      try {
+        // Reusar cache si está disponible
+        const cached = getProductById(productId);
+        let data = null;
+        if (cached) {
+          data = cached;
+        } else {
+          const fetched = await fetchProductById(productId);
+          data = fetched;
+        }
 
-  const loadProduct = async () => {
-    try {
-      const docRef = doc(db, 'productos_public', productId);
-      const docSnap = await getDoc(docRef);
+        if (data) {
+          if (!data.publishOnline) {
+            navigate('/404');
+            return;
+          }
 
-      if (docSnap.exists()) {
-        const data = { id: docSnap.id, ...docSnap.data() };
-        
-        if (!data.publishOnline) {
+          setProduct(data);
+          if (data.variants && data.variants.length > 0) {
+            setSelectedVariant(data.variants[0]);
+          }
+        } else {
           navigate('/404');
-          return;
         }
-
-        setProduct(data);
-        if (data.variants && data.variants.length > 0) {
-          setSelectedVariant(data.variants[0]);
-        }
-      } else {
-        navigate('/404');
+      } catch (err) {
+        console.error('Error loading product:', err);
+        toast.error('Error al cargar el producto');
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error loading product:', error);
-      toast.error('Error al cargar el producto');
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    loadProduct();
+  }, [productId, fetchProductById, getProductById, navigate]);
 
   const handleVariantChange = (variant) => {
     setSelectedVariant(variant);
@@ -93,7 +99,7 @@ ${selectedSize ? `📏 Talla: ${selectedSize.size}` : ''}
 ¿Está disponible?`;
 
     const url = `https://wa.me/5215615967613?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   if (loading) {

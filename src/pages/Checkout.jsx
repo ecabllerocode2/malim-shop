@@ -11,7 +11,7 @@ import { toast } from 'react-toastify';
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const { cart, getTotalPrice, clearCart } = useCart();
+  const { cart, getTotalPrice } = useCart();
   const [loading, setLoading] = useState(false);
   
   // Constantes de envío

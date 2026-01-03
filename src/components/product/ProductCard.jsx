@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import Image from '../ui/Image';
 import Badge from '../ui/Badge';
 import { formatPrice, calculateDiscountedPrice, getMainImage } from '../../utils/format';
-import { cn } from '../../utils/cn';
+// removed unused 'cn' import
 
 const ProductCard = ({ product, index = 0 }) => {
   const mainImage = getMainImage(product);

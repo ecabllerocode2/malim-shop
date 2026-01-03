@@ -1,7 +1,7 @@
 // Componente de autenticación con múltiples métodos
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FaGoogle, FaEnvelope, FaTimes, FaLock } from 'react-icons/fa';
+import { FaGoogle, FaEnvelope, FaTimes } from 'react-icons/fa';
 import { 
   signInWithGoogle, 
   signInWithEmail, 

@@ -1,15 +1,15 @@
 // Componente para renderizar mensajes del asistente con detección de productos
 import { useState, useEffect } from 'react';
 import ProductRecommendationCard from './ProductRecommendationCard';
-import { db } from '../../credenciales';
-import { doc, getDoc } from 'firebase/firestore';
 import { getMainImage } from '../../utils/format';
+import { useProducts } from '../../contexts/ProductsContext';
+import DOMPurify from 'dompurify';
 import PropTypes from 'prop-types';
 
 const MessageWithProducts = ({ content, mode, onProductClick }) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
-
+  const { getProductById, fetchProductsByIds } = useProducts();
 
   useEffect(() => {
     // Extraer SKUs de la respuesta
@@ -31,49 +31,43 @@ const MessageWithProducts = ({ content, mode, onProductClick }) => {
       return Array.from(skus);
     };
 
-    // Obtener productos desde Firestore usando los IDs de documento (SKUs)
+    // Obtener productos reutilizando cache del context y haciendo batch fetch para faltantes
     const extractAndFetchProducts = async () => {
-      const skus = extractSKUs(content);
+      const skus = extractSKUs(content).slice(0, 50); // limite razonable
       if (skus.length === 0) {
         console.log('⚠️ No se detectaron SKUs en el mensaje');
         return;
       }
       setLoading(true);
       try {
-        console.log('📦 Buscando productos con SKUs:', skus);
-        const fetchedProducts = [];
-        for (const sku of skus.slice(0, 10)) {
-          try {
-            const docRef = doc(db, 'productos_public', sku);
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-              const data = docSnap.data();
-              if (data.publishOnline === true) {
-                const mainImage = getMainImage(data);
-                fetchedProducts.push({
-                  sku: docSnap.id,
-                  name: data.name,
-                  price: data.publicPrice,
-                  offer: data.offerPercentage || 0,
-                  category: data.category,
-                  image: mainImage || '/logo.png',
-                  colors: data.variants?.map(v => v.colorName).filter(Boolean) || [],
-                  description: data.shortDetails || '',
-                  variants: data.variants || []
-                });
-                console.log(`✅ Producto encontrado: ${data.name} (${sku}), imagen:`, mainImage);
-              } else {
-                console.log(`⚠️ Producto ${sku} no está publicado online`);
-              }
-            } else {
-              console.log(`❌ Producto ${sku} no existe en Firestore`);
-            }
-          } catch (error) {
-            console.error(`Error al obtener producto ${sku}:`, error);
+        const results = [];
+        const missing = [];
+        for (const sku of skus) {
+          const cached = getProductById(sku);
+          if (cached) {
+            if (cached.publishOnline) results.push(cached);
+          } else {
+            missing.push(sku);
           }
         }
-        console.log(`🎉 Total de productos encontrados: ${fetchedProducts.length}`);
-        setProducts(fetchedProducts);
+
+        if (missing.length > 0) {
+          const fetched = await fetchProductsByIds(missing);
+          fetched.forEach(p => { if (p && p.publishOnline) results.push(p); });
+        }
+
+        const mapped = results.slice(0, 10).map(p => ({
+          sku: p.id,
+          name: p.name,
+          price: p.publicPrice,
+          offer: p.offerPercentage || 0,
+          category: p.category,
+          image: getMainImage(p) || '/logo.png',
+          colors: p.variants?.map(v => v.colorName).filter(Boolean) || [],
+          description: p.shortDetails || '',
+          variants: p.variants || []
+        }));
+        setProducts(mapped);
       } catch (error) {
         console.error('Error al obtener productos:', error);
       } finally {
@@ -84,7 +78,7 @@ const MessageWithProducts = ({ content, mode, onProductClick }) => {
     if (mode === 'recommendation') {
       extractAndFetchProducts();
     }
-  }, [content, mode]);
+  }, [content, mode, fetchProductsByIds, getProductById]);
 
 
   /**
@@ -92,7 +86,14 @@ const MessageWithProducts = ({ content, mode, onProductClick }) => {
    */
   const convertMarkdown = (text) => {
     // Convertir **texto** a <strong>texto</strong>
-    return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    const html = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // Sanitize HTML antes de devolver
+    try {
+      return typeof window !== 'undefined' ? DOMPurify.sanitize(html) : html;
+    } catch (err) {
+      console.warn('convertMarkdown sanitize error:', err);
+      return html;
+    }
   };
 
   /**

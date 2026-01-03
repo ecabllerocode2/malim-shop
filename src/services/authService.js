@@ -9,7 +9,7 @@ import {
   createUserWithEmailAndPassword,
   updateProfile
 } from 'firebase/auth';
-import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
 
 const db = getFirestore();
 
@@ -22,9 +22,9 @@ export function setupRecaptcha(elementId = 'recaptcha-container') {
   if (!window.recaptchaVerifier) {
     window.recaptchaVerifier = new RecaptchaVerifier(auth, elementId, {
       'size': 'invisible',
-      'callback': (response) => {
-        console.log('✅ reCAPTCHA resuelto');
-      },
+      'callback': () => {
+          console.log('✅ reCAPTCHA resuelto');
+        },
       'expired-callback': () => {
         console.log('⚠️ reCAPTCHA expirado');
       }

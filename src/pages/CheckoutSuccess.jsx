@@ -24,7 +24,7 @@ const CheckoutSuccess = () => {
     const message = encodeURIComponent(
       `¡Hola! Acabo de completar mi compra (ID: ${sessionId}). Me gustaría recibir detalles sobre el envío y seguimiento de mi pedido.`
     );
-    window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
+    window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank', 'noopener,noreferrer');
   };
 
   return (

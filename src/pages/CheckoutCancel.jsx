@@ -12,7 +12,7 @@ const CheckoutCancel = () => {
     const message = encodeURIComponent(
       '¡Hola! Tuve un problema durante el proceso de pago y me gustaría recibir ayuda.'
     );
-    window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank');
+    window.open(`https://wa.me/${phoneNumber}?text=${message}`, '_blank', 'noopener,noreferrer');
   };
 
   return (

@@ -1,5 +1,7 @@
+/* eslint-disable react-refresh/only-export-components */
 // Contexto de autenticación para el asistente de estilo
 import { createContext, useContext, useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { auth } from '../credenciales';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getCurrentUser, logout as authLogout, getUserData } from '../services/authService';
@@ -96,6 +98,10 @@ export const AuthProvider = ({ children }) => {
       {children}
     </AuthContext.Provider>
   );
+};
+
+AuthProvider.propTypes = {
+  children: PropTypes.node,
 };
 
 /**

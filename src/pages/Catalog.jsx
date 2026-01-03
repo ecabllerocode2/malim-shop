@@ -85,7 +85,7 @@ const Catalog = () => {
     }
 
     return filtered;
-  }, [products, selectedCategory, sortBy, searchTerm]);
+  }, [products, selectedCategory, sortBy, searchTerm, searchParams]);
 
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);

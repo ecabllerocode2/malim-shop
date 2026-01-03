@@ -54,6 +54,7 @@ const UserDataForm = ({ onComplete, initialName = '', userEmail = '' }) => {
         email: userEmail
       });
     } catch (err) {
+      console.warn('UserDataForm submit error:', err);
       setError('Error al guardar tus datos. Intenta nuevamente.');
       setLoading(false);
     }

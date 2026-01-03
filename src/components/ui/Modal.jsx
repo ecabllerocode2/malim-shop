@@ -1,7 +1,7 @@
 // Componente Modal/Dialog
 import { Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { motion, AnimatePresence } from 'framer-motion';
+// framer-motion not required here
 import { FaTimes } from 'react-icons/fa';
 import { cn } from '../../utils/cn';
 

@@ -1,6 +1,8 @@
+/* eslint-disable react-refresh/only-export-components */
 // Hook personalizado para el carrito de compras
 import { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
+import PropTypes from 'prop-types';
 
 const CartContext = createContext();
 
@@ -100,6 +102,10 @@ export const CartProvider = ({ children }) => {
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+};
+
+CartProvider.propTypes = {
+  children: PropTypes.node,
 };
 
 export const useCart = () => {

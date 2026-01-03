@@ -1,5 +1,5 @@
 // src/DetallePrenda.jsx
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FaWhatsapp, FaArrowLeft } from "react-icons/fa";
 import logo from "./logo.png";
@@ -30,7 +30,7 @@ function DetallePrenda() {
   const { id } = useParams();
   const navigate = useNavigate();
   // Desestructuramos el estado de carga global y la función de carga individual
-  const { products = [], loading: isContextLoading, fetchProductById } = useProducts(); 
+  const { products = [], fetchProductById } = useProducts(); 
   const [prenda, setPrenda] = useState(null);
   const [isProductLoading, setIsProductLoading] = useState(true); // Estado de carga local
   const [imagenPrincipal, setImagenPrincipal] = useState(0);
@@ -54,14 +54,14 @@ function DetallePrenda() {
             try {
                 // Intentar cargar la prenda con una lectura individual de Firestore
                 found = await fetchProductById(id);
-            } catch (error) {
-                // Si falla (producto no existe), navegamos a la raíz y reemplazamos el historial
-                if (isMounted) {
-                    console.warn(`Producto ${id} no encontrado.`);
-                    navigate("/", { replace: true });
-                    setIsProductLoading(false);
-                }
-                return;
+            } catch (err) {
+              // Si falla (producto no existe), navegamos a la raíz y reemplazamos el historial
+              if (isMounted) {
+                console.warn(`Producto ${id} no encontrado.`, err);
+                navigate("/", { replace: true });
+                setIsProductLoading(false);
+              }
+              return;
             }
         }
 

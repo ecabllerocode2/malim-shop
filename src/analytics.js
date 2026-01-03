@@ -60,7 +60,7 @@ export const trackViewItem = (item) => {
 };
 
 export const trackWhatsappClick = (item, waNumber, waUrl) => {
-  const open = () => window.open(waUrl, '_blank');
+  const open = () => window.open(waUrl, '_blank', 'noopener,noreferrer');
   if (!window.gtag) {
     open();
     return;

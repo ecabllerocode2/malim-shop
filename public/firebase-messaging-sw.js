@@ -1,9 +1,9 @@
+/* global importScripts, firebase, clients */
 // Give the service worker access to Firebase Messaging.
 // Note that you can only use Firebase Messaging here. Other Firebase libraries
 // are not available in the service worker.
 
-const { data } = require("autoprefixer");
-
+// NOTE: removed accidental require of autoprefixer (not available in SW)
 // Replace 10.13.2 with latest version of the Firebase JS SDK.
 importScripts('https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.13.2/firebase-messaging-compat.js');
@@ -35,8 +35,9 @@ messaging.onBackgroundMessage((payload) => {
   const notificationOptions = {
     body: payload.notification.body,
     icon: payload.notification.image,
-    url: payload.data?.click_action
-
+    data: {
+      click_action: payload.data?.click_action
+    }
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
@@ -45,12 +46,26 @@ messaging.onBackgroundMessage((payload) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const productUrl = event.notification.data?.click_action;
-  event.waitUntil(
-    clients.openWindow(productUrl).then((windowClient) => {
-      if (windowClient) {
-        windowClient.focus();
-      }
-    })
-  );
+  const clickAction = event.notification.data?.click_action;
+  // Validar que la URL sea relativa o pertenezca al mismo origen para prevenir apertura de sitios externos maliciosos
+  try {
+    if (!clickAction) return;
+    // permitir rutas relativas
+    if (clickAction.startsWith('/')) {
+      event.waitUntil(clients.openWindow(clickAction));
+      return;
+    }
+
+    // Permitir solo si coincide con el origen del service worker
+    const origin = self.location && self.location.origin ? self.location.origin : null;
+    if (origin && clickAction.startsWith(origin)) {
+      event.waitUntil(clients.openWindow(clickAction));
+      return;
+    }
+
+    // Si no es una URL permitida, ignorar y loguear
+    console.warn('Ignored notification click_action with disallowed origin:', clickAction);
+  } catch (e) {
+    console.warn('Error handling notification click_action:', e);
+  }
 });

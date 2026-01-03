@@ -1,5 +1,6 @@
 // main.jsx
 import { StrictMode } from "react";
+import PropTypes from 'prop-types';
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import { BrowserRouter, Route, Routes, useLocation } from "react-router-dom";
@@ -30,6 +31,7 @@ import DetallePrenda from "./DetallePrenda.jsx";
 
 initGA(import.meta.env.VITE_GA_ID || "G-9DD5YEX28R");
 
+/* eslint-disable react-refresh/only-export-components */
 // Wrapper para Catalog que usa location como key
 const CatalogWrapper = () => {
   const location = useLocation();
@@ -78,6 +80,10 @@ const Layout = ({ children }) => {
       />
     </>
   );
+};
+
+Layout.propTypes = {
+  children: PropTypes.node,
 };
 
 createRoot(document.getElementById("root")).render(

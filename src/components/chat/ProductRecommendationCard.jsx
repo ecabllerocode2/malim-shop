@@ -5,7 +5,6 @@ import { FaExternalLinkAlt, FaTag, FaShoppingBag } from 'react-icons/fa';
 import { Link } from 'react-router-dom';
 
 const ProductRecommendationCard = ({ product, index, onProductClick }) => {
-  const [imageError, setImageError] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   
   // Calcular precio con descuento si existe
@@ -56,7 +55,6 @@ const ProductRecommendationCard = ({ product, index, onProductClick }) => {
       setCurrentImageIndex(prev => prev + 1);
     } else {
       console.log('❌ No hay más imágenes disponibles, usando logo');
-      setImageError(true);
     }
   };
   

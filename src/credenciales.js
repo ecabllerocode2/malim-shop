@@ -1,6 +1,6 @@
 // credenciales.js
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, query, where, Timestamp, getDocs } from "firebase/firestore";
+import { getFirestore, collection, addDoc, query, where, Timestamp, getDocs, enableIndexedDbPersistence } from "firebase/firestore";
 import { getMessaging, getToken } from "firebase/messaging";
 import { getAnalytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
@@ -21,6 +21,19 @@ const app = initializeApp(firebaseConfig);
 
 // Firestore
 const db = getFirestore(app);
+
+// Habilitar persistence (IndexedDB) para reducir lecturas de red cuando sea posible
+try {
+  enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+      console.warn('Persistence no activada: múltiples pestañas abiertas');
+    } else {
+      console.warn('Persistence no soportada:', err);
+    }
+  });
+} catch {
+  // En algunos entornos (SSR) esto puede fallar; ignorar
+}
 
 // Messaging
 const messaging = getMessaging(app);

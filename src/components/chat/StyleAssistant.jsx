@@ -20,7 +20,6 @@ import { saveUserData, getUserData } from '../../services/authService';
 // URL del endpoint
 const API_ENDPOINT = `${BACKEND_API_URL}/api/asesor-estilo`;
 
-/* eslint-disable react/prop-types */
 const StyleAssistant = ({ isOpen, onClose }) => {
   const { user, idToken, updateUser, refreshToken, logout } = useAuth();
   const [messages, setMessages] = useState([]);

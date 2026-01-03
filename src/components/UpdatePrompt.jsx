@@ -15,37 +15,55 @@ const UpdatePrompt = () => {
   useEffect(() => {
     // Solo funciona en producción (cuando hay service worker)
     if ('serviceWorker' in navigator) {
-      // Escuchar actualizaciones del service worker
+      // Escuchar actualizaciones del service worker y limpiar al desmontar
+      let registrationRef = null;
+      let updateFoundHandler = null;
+      let newWorkerStateChangeHandler = null;
+      let controllerChangeHandler = null;
+      let refreshing = false;
+
       navigator.serviceWorker.ready.then((registration) => {
-        registration.addEventListener('updatefound', () => {
+        registrationRef = registration;
+
+        updateFoundHandler = () => {
           const newWorker = registration.installing;
-          
-          newWorker.addEventListener('statechange', () => {
+          if (!newWorker) return;
+          newWorkerStateChangeHandler = () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // Hay una nueva versión disponible
               setWaitingWorker(newWorker);
               setShowPrompt(true);
             }
-          });
-        });
-      });
+          };
+          newWorker.addEventListener('statechange', newWorkerStateChangeHandler);
+        };
 
-      // Escuchar cuando el service worker toma control (después de actualizar)
-      let refreshing = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!refreshing) {
-          refreshing = true;
-          window.location.reload();
-        }
-      });
+        registration.addEventListener('updatefound', updateFoundHandler);
 
-      // Verificar si ya hay un service worker esperando
-      navigator.serviceWorker.ready.then((registration) => {
+        // Verificar si ya hay un service worker esperando
         if (registration.waiting) {
           setWaitingWorker(registration.waiting);
           setShowPrompt(true);
         }
-      });
+      }).catch((err) => { console.warn('serviceWorker.ready error:', err); });
+
+      // Escuchar cuando el service worker toma control (después de actualizar)
+      controllerChangeHandler = () => {
+        if (!refreshing) {
+          refreshing = true;
+          window.location.reload();
+        }
+      };
+      navigator.serviceWorker.addEventListener('controllerchange', controllerChangeHandler);
+
+      return () => {
+        try {
+          if (registrationRef && updateFoundHandler) registrationRef.removeEventListener('updatefound', updateFoundHandler);
+          if (registrationRef && newWorkerStateChangeHandler && registrationRef.installing) registrationRef.installing.removeEventListener('statechange', newWorkerStateChangeHandler);
+          if (controllerChangeHandler) navigator.serviceWorker.removeEventListener('controllerchange', controllerChangeHandler);
+        } catch (err) {
+          console.warn('UpdatePrompt cleanup error:', err);
+        }
+      };
     }
   }, []);
 

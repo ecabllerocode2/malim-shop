@@ -164,10 +164,7 @@ const Hero = () => {
                 transition={{ duration: 0.5, delay: 1 }}
                 className="absolute -top-8 -right-8 bg-white rounded-2xl shadow-medium p-6"
               >
-                <div className="text-center">
-                  <p className="text-4xl font-bold text-primary-600">-40%</p>
-                  <p className="text-sm text-gray-600 mt-1">Descuento</p>
-                </div>
+                
               </motion.div>
             </div>
           </motion.div>

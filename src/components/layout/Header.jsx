@@ -6,7 +6,6 @@ import {
   FaSearch, 
   FaBars, 
   FaTimes,
-  FaHeart,
   FaUser,
   FaSignOutAlt
 } from 'react-icons/fa';
@@ -29,7 +28,7 @@ const Header = () => {
   const [userData, setUserData] = useState(null);
   
   const navigate = useNavigate();
-  const { user, idToken, logout, updateUser } = useAuth();
+  const { user, logout, updateUser } = useAuth();
 
   // Detectar scroll para cambiar estilo del header
   useEffect(() => {

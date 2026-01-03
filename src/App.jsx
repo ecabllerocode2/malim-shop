@@ -1,6 +1,6 @@
 // src/App.jsx
 import logo from "./logo.png";
-import React, { useEffect, useState, useMemo, useLayoutEffect, useRef } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { FaSearch, FaWhatsapp, FaTimes } from "react-icons/fa";
 import { generateToken, messaging } from "./credenciales";
 import { onMessage } from "firebase/messaging";
@@ -10,12 +10,25 @@ import "react-toastify/dist/ReactToastify.css";
 import { useProducts } from "./contexts/ProductsContext";
 import { initGA, pageView, trackSelectItem, trackWhatsappClick, trackSearch } from "./analytics";
 
+const categoriasConfig = {
+  Todo: () => true,
+  Premium: (p) => p.proveedor === "Aspik",
+  Invierno: (p) =>
+    ["Ensambles", "Abrigos", "Chamarras", "Mallones", "Sudaderas", "Capas", "Maxi sudaderas", "Gorros", "Maxi cobijas", "Chalecos", "Suéteres"].includes(p.categoria),
+  Casual: (p) =>
+    ["Blusones", "Pijamas", "Blazers", "Faldas", "Palazzos", "Blusas", "Gabardinas", "Playeras", "Sacos", "Chalecos", "Conjuntos", "Maxi vestidos", "Camisas", "Medias"].includes(p.categoria),
+  Deporte: (p) => ["Playeras deportivas", "Leggins", "Conjuntos deportivos", "Pants", "Shorts"].includes(p.categoria),
+  Infantil: (p) => ["Infantil niño", "Infantil niña", "Niños unisex", "Niños uisex"].includes(p.categoria),
+  Pantalones: (p) => ["Pantalones", "Leggins", "Overoles"].includes(p.categoria),
+  Ofertas: (prenda) => prenda.oferta && prenda.oferta > 0,
+};
+
 function App() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [categoriaSeleccionada, setCategoriaSeleccionada] = useState("Todo");
   const [busqueda, setBusqueda] = useState("");
-  const [headerHeight, setHeaderHeight] = useState(0);
+  
   const [nudge, setNudge] = useState(false);
 
   const navigate = useNavigate();
@@ -45,7 +58,7 @@ function App() {
       const { outcome } = await deferredPrompt.userChoice;
       toast[outcome === "accepted" ? "success" : "info"](outcome === "accepted" ? "App instalada" : "Instalación cancelada");
       setShowInstallButton(false);
-    } catch (err) {
+    } catch {
       toast.error("Error en la instalación");
     } finally {
       setDeferredPrompt(null);
@@ -55,8 +68,9 @@ function App() {
   // Firebase Messaging
   useEffect(() => {
     generateToken();
+    let unsubscribeOnMessage = null;
     try {
-      onMessage(messaging, (payload) => {
+      unsubscribeOnMessage = onMessage(messaging, (payload) => {
         const title = payload.notification?.title || "Notificación";
         const body = payload.notification?.body || "";
         toast.info(`${title}${body ? ` — ${body}` : ""}`);
@@ -64,22 +78,16 @@ function App() {
     } catch (e) {
       console.warn("onMessage error:", e);
     }
+
+    return () => {
+      try {
+        if (typeof unsubscribeOnMessage === 'function') unsubscribeOnMessage();
+      } catch (e) { console.warn('Error during unsubscribeOnMessage cleanup:', e); }
+    };
   }, []);
 
   // Categorías
-  const categoriasConfig = {
-    Todo: () => true,
-    Premium: (p) => p.proveedor === "Aspik",
-    Invierno: (p) =>
-      ["Ensambles", "Abrigos", "Chamarras", "Mallones", "Sudaderas", "Capas", "Maxi sudaderas", "Gorros", "Maxi cobijas", "Chalecos", "Suéteres"].includes(p.categoria),
-    Casual: (p) =>
-      ["Blusones", "Pijamas", "Blazers", "Faldas", "Palazzos", "Blusas", "Gabardinas", "Playeras", "Sacos", "Chalecos", "Conjuntos", "Maxi vestidos", "Camisas", "Medias"].includes(p.categoria),
-    Deporte: (p) => ["Playeras deportivas", "Leggins", "Conjuntos deportivos", "Pants", "Shorts"].includes(p.categoria),
-    Infantil: (p) => ["Infantil niño", "Infantil niña", "Niños unisex", "Niños uisex"].includes(p.categoria),
-    Pantalones: (p) => ["Pantalones", "Leggins", "Overoles"].includes(p.categoria),
-    // Aseguramos que la oferta sea > 0
-    Ofertas: (prenda) => prenda.oferta && prenda.oferta > 0,
-  };
+  // Categorías moved to module scope to avoid changing reference across renders
 
   const filteredPrendas = useMemo(() => {
     const filterFn = categoriasConfig[categoriaSeleccionada] ?? categoriasConfig.Todo;
@@ -111,22 +119,9 @@ function App() {
 
   const clearBusqueda = () => setBusqueda("");
 
-  const enviarWhatsapp = (e, prenda) => {
-    e.stopPropagation();
-    const foto = prenda.fotos?.[0] ?? "";
-    const mensaje = `Hola, estoy interesada en este producto:\n${prenda.prenda}${foto ? `\n${foto}` : ""}`;
-    const waUrl = `https://wa.me/5615967613?text=${encodeURIComponent(mensaje)}`;
-    trackWhatsappClick({ id: prenda.id, nombre: prenda.prenda, categoria: prenda.categoria, precio: prenda.precio }, "5615967613", waUrl);
-  };
+  // enviarWhatsapp removed (not used)
 
-  // Medir altura del header
-  const measureHeader = () => setHeaderHeight(headerRef.current?.offsetHeight ?? 0);
-  useLayoutEffect(measureHeader, [categoriaSeleccionada]);
-  useEffect(() => {
-    const obs = new ResizeObserver(measureHeader);
-    if (headerRef.current) obs.observe(headerRef.current);
-    return () => obs.disconnect();
-  }, []);
+  // (header height measurement removed — not used)
 
   // WhatsApp nudge
   useEffect(() => {
