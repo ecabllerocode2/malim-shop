@@ -15,9 +15,9 @@ import Header from "./components/layout/Header";
 import Footer from "./components/layout/Footer";
 import DebugPanel from "./components/DebugPanel";
 import ScrollToTop from "./components/ScrollToTop";
-import UpdatePrompt from "./components/UpdatePrompt";
 import StyleAssistant from "./components/chat/StyleAssistant";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAutoUpdate } from "./hooks/useAutoUpdate";
 
 // Pages
 import Home from "./pages/Home";
@@ -40,6 +40,9 @@ const CatalogWrapper = () => {
 
 const Layout = ({ children }) => {
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  
+  // Hook para actualización automática
+  useAutoUpdate();
 
   return (
     <>
@@ -48,7 +51,6 @@ const Layout = ({ children }) => {
       {children}
       <Footer />
       <DebugPanel />
-      <UpdatePrompt />
       <ToastContainer
         position="bottom-right"
         autoClose={3000}

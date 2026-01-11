@@ -12,11 +12,40 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      injectRegister: 'auto', // Inyecta automáticamente el código de registro del SW
+      injectRegister: 'auto',
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'], // Incluye todos los archivos necesarios
-        clientsClaim: true, // Tomar control inmediatamente
-        skipWaiting: true, // Activar nuevo SW sin esperar
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+        // Cache para archivos estáticos
+        runtimeCaching: [
+          {
+            urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'google-fonts-cache',
+              expiration: {
+                maxEntries: 10,
+                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 año
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
+          {
+            urlPattern: /^https:\/\/firebasestorage\.googleapis\.com\/.*/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'firebase-images-cache',
+              expiration: {
+                maxEntries: 50,
+                maxAgeSeconds: 60 * 60 * 24 * 7 // 1 semana
+              }
+            }
+          }
+        ],
+        clientsClaim: true,
+        skipWaiting: true,
+        cleanupOutdatedCaches: true // Limpia cachés viejos automáticamente
       },
       manifest: {
         name: 'Malim Shop',
@@ -39,6 +68,9 @@ export default defineConfig({
           },
         ],
       },
+      devOptions: {
+        enabled: false // Desactivado en desarrollo para evitar conflictos
+      }
     }),
   ],
   build: {

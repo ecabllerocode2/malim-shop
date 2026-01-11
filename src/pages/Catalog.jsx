@@ -1,5 +1,5 @@
 // Página de catálogo con filtros
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FaFilter, FaTimes, FaSearch } from 'react-icons/fa';
@@ -90,33 +90,16 @@ const Catalog = () => {
   const handleCategoryChange = (category) => {
     setSelectedCategory(category);
     
-    // Crear nuevo objeto de parámetros limpio
+    // Actualizar URL solo con la categoría
     const newParams = new URLSearchParams();
-    
     if (category !== 'all') {
       newParams.set('categoria', category);
-      // Mantener búsqueda si existe
-      if (searchTerm) {
-        newParams.set('busqueda', searchTerm);
-      }
-    } else {
-      // Al seleccionar "Todas", solo mantener búsqueda, eliminar filtros
-      if (searchTerm) {
-        newParams.set('busqueda', searchTerm);
-      }
     }
-    
     setSearchParams(newParams);
   };
 
   const handleSearchChange = (value) => {
     setSearchTerm(value);
-    if (value.trim()) {
-      searchParams.set('busqueda', value);
-    } else {
-      searchParams.delete('busqueda');
-    }
-    setSearchParams(searchParams);
   };
 
   const clearFilters = () => {
@@ -126,14 +109,13 @@ const Catalog = () => {
     setSearchParams(new URLSearchParams());
   };
   
-  // Sincronizar filtros desde URL cuando cambia
+  // Sincronizar categoría desde URL al cargar
   useEffect(() => {
     const categoriaUrl = searchParams.get('categoria');
-    const busquedaUrl = searchParams.get('busqueda');
-    
-    setSelectedCategory(categoriaUrl || 'all');
-    setSearchTerm(busquedaUrl || '');
-  }, [searchParams]);
+    if (categoriaUrl && categoriaUrl !== selectedCategory) {
+      setSelectedCategory(categoriaUrl);
+    }
+  }, []); // Solo al montar el componente
 
   return (
     <div className="min-h-screen bg-neutral-50 pb-20">
