@@ -53,9 +53,8 @@ const Home = () => {
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {[
-              { icon: '🚚', title: 'Envío Gratis', desc: 'En compras +$900' },
+              { icon: '🚚', title: 'Envío Gratis', desc: 'En compras +$999' },
               { icon: '💳', title: 'Pago Seguro', desc: 'Protección 100%' },
-              { icon: '↩️', title: 'Devoluciones', desc: '30 días gratis' },
               { icon: '💬', title: 'Soporte 24/7', desc: 'Siempre contigo' },
             ].map((item, i) => (
               <motion.div

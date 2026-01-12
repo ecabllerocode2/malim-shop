@@ -15,7 +15,6 @@ const Footer = () => {
     help: [
       { name: 'Preguntas Frecuentes', href: '/faq' },
       { name: 'Envíos', href: '/envios' },
-      { name: 'Devoluciones', href: '/devoluciones' },
       { name: 'Tallas', href: '/guia-tallas' },
     ],
     company: [

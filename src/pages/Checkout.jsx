@@ -15,7 +15,7 @@ const Checkout = () => {
   const [loading, setLoading] = useState(false);
   
   // Constantes de envío
-  const ENVIO_GRATIS_MINIMO = 900;
+  const ENVIO_GRATIS_MINIMO = 999;
   const COSTO_ENVIO = 179;
   
   const subtotal = getTotalPrice();

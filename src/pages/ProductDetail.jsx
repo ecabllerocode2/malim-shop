@@ -359,14 +359,7 @@ ${selectedSize ? `📏 Talla: ${selectedSize.size}` : ''}
                 <div className="text-2xl">🚚</div>
                 <div>
                   <p className="font-semibold text-sm">Envío Gratis</p>
-                  <p className="text-xs text-gray-600">En compras +$900</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-4 bg-neutral-50 rounded-xl">
-                <div className="text-2xl">↩️</div>
-                <div>
-                  <p className="font-semibold text-sm">Devolución</p>
-                  <p className="text-xs text-gray-600">30 días gratis</p>
+                  <p className="text-xs text-gray-600">En compras +$999</p>
                 </div>
               </div>
             </div>

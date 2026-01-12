@@ -25,7 +25,7 @@ const CartDrawer = () => {
   const totalItems = getTotalItems();
   
   // Constantes de envío
-  const ENVIO_GRATIS_MINIMO = 900;
+  const ENVIO_GRATIS_MINIMO = 999;
   const COSTO_ENVIO = 179;
   
   // Calcular envío
